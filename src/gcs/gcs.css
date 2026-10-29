@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+.gcs-shell {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+.gcs-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.gcs-header-button,
+.gcs-map-control,
+.gcs-square-control,
+.gcs-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid rgb(30 41 59 / 0.7);
+  background: rgb(15 23 42 / 0.35);
+  color: rgb(148 163 184);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.gcs-header-button { height: 28px; padding: 0 0.5rem; }
+.gcs-map-control { height: 27px; padding: 0 0.5rem; }
+.gcs-square-control { width: 28px; height: 28px; }
+.gcs-action-button { height: 30px; padding: 0 0.45rem; }
+
+.gcs-header-button:hover,
+.gcs-map-control:hover,
+.gcs-square-control:hover,
+.gcs-action-button:hover {
+  border-color: rgb(71 85 105 / 0.95);
+  background: rgb(30 41 59 / 0.55);
+  color: rgb(226 232 240);
+}
+
+.gcs-header-button:focus-visible,
+.gcs-map-control:focus-visible,
+.gcs-square-control:focus-visible,
+.gcs-action-button:focus-visible {
+  outline: 2px solid rgb(148 163 184 / 0.7);
+  outline-offset: 2px;
+}
+
+.gcs-map-grid {
+  background-color: #0d1421;
+  background-image:
+    linear-gradient(to right, rgb(51 65 85 / 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(51 65 85 / 0.22) 1px, transparent 1px),
+    linear-gradient(to right, rgb(51 65 85 / 0.11) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(51 65 85 / 0.11) 1px, transparent 1px);
+  background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+}
+
+.gcs-aircraft-node {
+  --node-tone: #64748b;
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transform: translate(-50%, -50%);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #cbd5e1;
+  text-align: left;
+}
+
+.gcs-node-reticle {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--node-tone) 78%, transparent);
+  border-radius: 999px;
+  background: #0b0f19;
+  color: var(--node-tone);
+}
+
+.gcs-node-label {
+  display: grid;
+  gap: 1px;
+  min-width: 78px;
+  padding: 4px 6px;
+  border-left: 1px solid color-mix(in srgb, var(--node-tone) 68%, transparent);
+  background: rgb(11 15 25 / 0.82);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.gcs-node-label b { color: #e2e8f0; font-weight: 500; }
+.gcs-node-label small { color: #64748b; font-size: 9px; }
+.gcs-aircraft-node:hover .gcs-node-reticle,
+.gcs-aircraft-node.is-selected .gcs-node-reticle { border-width: 2px; }
+.gcs-aircraft-node:focus-visible { outline: 2px solid #94a3b8; outline-offset: 3px; }
+
+.gcs-fpv-grid {
+  position: relative;
+  overflow: hidden;
+  background-image:
+    linear-gradient(to right, rgb(51 65 85 / 0.32) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(51 65 85 / 0.32) 1px, transparent 1px);
+  background-size: 25% 33.333%;
+}
+
+.gcs-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(148 163 184 / 0.6);
+  border-radius: 999px;
+}
+
+.gcs-reticle::before,
+.gcs-reticle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: rgb(148 163 184 / 0.6);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+.gcs-reticle::before { width: 42px; height: 1px; }
+.gcs-reticle::after { width: 1px; height: 42px; }
+
+.gcs-compact-summary { display: none; }
+.gcs-toast { max-width: min(92vw, 560px); }
+.gcs-mobile-tabs { display: none; }
+
+@media (max-width: 1100px) {
+  .gcs-mobile-tabs {
+    display: flex;
+    height: 38px;
+    flex: 0 0 38px;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgb(30 41 59 / 0.5);
+    background: #0b0f19;
+  }
+  .gcs-mobile-tabs button {
+    flex: 1;
+    height: 28px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .gcs-mobile-tabs button[aria-pressed='true'] { border-color: rgb(51 65 85 / 0.85); background: rgb(30 41 59 / 0.45); color: #e2e8f0; }
+  .gcs-mobile-tabs button:focus-visible { outline: 2px solid rgb(148 163 184 / 0.7); outline-offset: -2px; }
+  .gcs-main-grid { height: calc(100dvh - 86px) !important; grid-template-columns: 1fr !important; }
+  .gcs-main-grid .gcs-fleet-panel,
+  .gcs-main-grid .gcs-airspace-panel,
+  .gcs-main-grid .gcs-focus-panel { display: none; }
+  .gcs-main-grid.gcs-panel-fleet .gcs-fleet-panel,
+  .gcs-main-grid.gcs-panel-focus .gcs-focus-panel { display: flex; }
+  .gcs-main-grid.gcs-panel-airspace .gcs-airspace-panel { display: block; }
+  .gcs-compact-summary { display: block; }
+  .gcs-fleet-panel, .gcs-focus-panel { border-left: 0; border-right: 0; }
+}
+
+@media (max-width: 720px) {
+  .gcs-compact-summary { display: block; max-width: calc(100% - 1.5rem); }
+  .gcs-node-label { min-width: 0; }
+  .gcs-shell > header { padding-right: 0.5rem; padding-left: 0.5rem; }
+  .gcs-shell > header > div { gap: 0.375rem; }
+  .gcs-simulation-label { flex: 0 0 auto; font-size: 8px; }
+  .gcs-header-button { padding: 0 0.4rem; }
+}
+
+@media (max-height: 640px) {
+  .gcs-fleet-note { display: none; }
+  .gcs-fleet-list { gap: 0.4rem; padding: 0.5rem; }
+  .gcs-fleet-list button { padding: 0.55rem; }
+  .gcs-fleet-list button > p { margin-bottom: 0.4rem; }
+  .gcs-focus-video { margin-top: 0.5rem; aspect-ratio: 3 / 1; }
+  .gcs-focus-metrics > div { padding-top: 0.4rem; padding-bottom: 0.4rem; }
+  .gcs-focus-chart { display: none; }
+  .gcs-focus-power { margin-top: 0.4rem; padding-top: 0.45rem; }
+  .gcs-focus-actions { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .gcs-focus-actions > p:last-child { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gcs-shell *, .gcs-shell *::before, .gcs-shell *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

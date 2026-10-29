@@ -50,18 +50,19 @@ function ZonePreview({ zones }: { zones: Zone[] }) {
   );
 }
 
-export default function IntroPage({ zones, onOpenDemo }: { zones: Zone[]; onOpenDemo: () => void }) {
+export default function IntroPage({ zones, onOpenDemo, onOpenGcs }: { zones: Zone[]; onOpenDemo: () => void; onOpenGcs: () => void }) {
   return (
     <div className="intro-shell" id="top">
       <header className="intro-header">
-        <button className="brand-button" onClick={() => scrollToSection('top')} aria-label="소개 첫 화면으로 이동">
+          <button className="brand-button" onClick={() => scrollToSection('top')} aria-label="소개 첫 화면으로 이동">
           <SMark />
           <span>TEAM S?</span>
         </button>
-        <nav className="intro-nav" aria-label="제품 탐색">
-          <button onClick={() => scrollToSection('problem')}>해결하는 문제</button>
-          <button onClick={() => scrollToSection('how')}>작동 방식</button>
-          <button className="nav-demo" onClick={onOpenDemo}>시연하기 <ArrowRight size={15} /></button>
+          <nav className="intro-nav" aria-label="제품 탐색">
+            <button onClick={() => scrollToSection('problem')}>해결하는 문제</button>
+            <button onClick={() => scrollToSection('how')}>작동 방식</button>
+            <button onClick={onOpenGcs}>GCS 콘솔</button>
+            <button className="nav-demo" onClick={onOpenDemo}>시연하기 <ArrowRight size={15} /></button>
         </nav>
       </header>
 
