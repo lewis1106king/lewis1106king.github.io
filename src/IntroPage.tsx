@@ -50,7 +50,7 @@ function ZonePreview({ zones }: { zones: Zone[] }) {
   );
 }
 
-export default function IntroPage({ zones, onOpenDemo, onOpenGcs }: { zones: Zone[]; onOpenDemo: () => void; onOpenGcs: () => void }) {
+export default function IntroPage({ zones, onOpenDemo, onOpenGcs, onOpenField }: { zones: Zone[]; onOpenDemo: () => void; onOpenGcs: () => void; onOpenField: () => void }) {
   return (
     <div className="intro-shell" id="top">
       <header className="intro-header">
@@ -61,6 +61,7 @@ export default function IntroPage({ zones, onOpenDemo, onOpenGcs }: { zones: Zon
           <nav className="intro-nav" aria-label="제품 탐색">
             <button onClick={() => scrollToSection('problem')}>해결하는 문제</button>
             <button onClick={() => scrollToSection('how')}>작동 방식</button>
+            <button onClick={onOpenField}>현장 상황판</button>
             <button onClick={onOpenGcs}>GCS 콘솔</button>
             <button className="nav-demo" onClick={onOpenDemo}>시연하기 <ArrowRight size={15} /></button>
         </nav>
@@ -80,6 +81,15 @@ export default function IntroPage({ zones, onOpenDemo, onOpenGcs }: { zones: Zon
             <p className="hero-footnote">작업 진행, 관측 확인, 인계 이력을 수색 구역별로 분리해 연결합니다.</p>
           </div>
           <ZonePreview zones={zones} />
+        </section>
+
+        <section className="section-block" aria-labelledby="field-board-title">
+          <div className="section-heading compact">
+            <p className="kicker">OFFLINE FIELD BOARD</p>
+            <h2 id="field-board-title">현장 상황판</h2>
+            <p>서버·계정 없이 브라우저와 파일로 현장 기록을 작성하고 보관합니다. 실제 GIS 지도나 실기체 제어가 아닌 가상 기록 도구입니다.</p>
+          </div>
+          <button className="button primary" onClick={onOpenField}>현장 상황판 열기 <ArrowRight size={16} /></button>
         </section>
 
         <section className="section-block problem-section" id="problem">

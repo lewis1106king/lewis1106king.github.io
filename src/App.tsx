@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import GcsPage from './gcs/GcsPage';
 import IntroPage from './IntroPage';
+import OfflineBoardPage from './offline/OfflineBoardPage';
 import WorkflowPage from './WorkflowPage';
 import { createWorkflow, projectZones } from './workflow';
 
@@ -19,5 +20,6 @@ export default function App() {
 
   if (route === '#gcs') return <GcsPage onBack={() => { window.location.hash = ''; }} />;
   if (route === '#demo') return <WorkflowPage onBack={() => { window.location.hash = ''; }} />;
-  return <IntroPage zones={previewZones} onOpenDemo={() => { window.location.hash = 'demo'; }} onOpenGcs={() => { window.location.hash = 'gcs'; }} />;
+  if (route === '#field') return <OfflineBoardPage onBack={() => { window.location.hash = ''; }} />;
+  return <IntroPage zones={previewZones} onOpenDemo={() => { window.location.hash = 'demo'; }} onOpenGcs={() => { window.location.hash = 'gcs'; }} onOpenField={() => { window.location.hash = 'field'; }} />;
 }

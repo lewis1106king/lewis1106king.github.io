@@ -1,0 +1,221 @@
+.fieldShell {
+  min-height: 100vh;
+  color: #142238;
+  background: #f7f8fa;
+}
+
+.fieldHeader {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 70px;
+  padding: 10px clamp(16px, 3vw, 42px);
+  border-bottom: 1px solid #dce2ea;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.fieldBrand, .fieldHeaderActions { display: flex; align-items: center; }
+.fieldBrand { min-width: 0; gap: 10px; }
+.fieldHeaderActions { justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
+.fieldBrand p, .fieldEyebrow {
+  margin: 0 0 3px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+}
+.fieldBrand h1 { margin: 0; font-size: 16px; letter-spacing: -0.035em; }
+.fieldBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 1px;
+  color: #526177;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 750;
+}
+.fieldBack:hover { color: #2563eb; }
+.fieldMark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #fff;
+  border-radius: 8px;
+  background: #2563eb;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: -0.08em;
+}
+.fieldMark span { color: #bfdbfe; }
+.fieldSimulation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 6px 9px;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.fieldMain { max-width: 1580px; margin: 0 auto; padding: 24px clamp(16px, 3vw, 42px) 52px; }
+.fieldOverview { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 12px; }
+.fieldOverview h2 { max-width: 720px; margin: 0 0 7px; color: #142238; font-size: clamp(23px, 2.45vw, 31px); letter-spacing: -0.055em; line-height: 1.2; }
+.fieldOverview p:not(.fieldEyebrow) { max-width: 800px; margin: 0; color: #526177; font-size: 13px; line-height: 1.55; }
+.fieldMetrics { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.fieldMetrics span { display: inline-flex; align-items: baseline; gap: 4px; min-height: 34px; padding: 7px 9px; color: #526177; border: 1px solid #dce2ea; border-radius: 7px; background: #fff; font-size: 11px; white-space: nowrap; }
+.fieldMetrics b { color: #142238; font-size: 16px; }
+.fieldMetrics .fieldMetric--amber { color: #92400e; border-color: #fdba74; background: #fff7ed; }
+.fieldMetrics .fieldMetric--amber b { color: #b45309; }
+
+.fieldNotice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  margin-bottom: 12px;
+  padding: 10px 11px;
+  border: 1px solid #dce2ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.fieldNotice > svg { margin-top: 1px; color: #2563eb; }
+.fieldNotice b { color: #334155; }
+.fieldNotice small { grid-column: 2; color: #64748b; font-size: 10px; }
+.fieldNotice--success { border-color: #bbf7d0; background: #f8fef9; }.fieldNotice--success > svg { color: #15803d; }
+.fieldNotice--warning { border-color: #fde68a; background: #fffbeb; }.fieldNotice--warning > svg { color: #b45309; }
+.fieldNotice--error { border-color: #fecaca; background: #fff8f8; }.fieldNotice--error > svg { color: #b42318; }
+
+.fieldTabs { display: none; }
+.fieldWorkspace { display: grid; grid-template-columns: minmax(232px, 0.72fr) minmax(440px, 1.62fr) minmax(346px, 1.08fr); gap: 14px; align-items: start; }
+.fieldPanel { min-width: 0; padding: 14px; border: 1px solid #dce2ea; border-radius: 11px; background: #fff; box-shadow: 0 1px 0 rgba(20, 34, 56, 0.04); }
+.fieldPanelHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.fieldPanelHeading h3, .fieldInspectionHeading h3 { margin: 0; color: #142238; font-size: 16px; letter-spacing: -0.03em; }
+.fieldPanelHeading > svg { color: #2563eb; }
+.fieldPanelDescription { margin: 11px 0 10px; color: #64748b; font-size: 11px; line-height: 1.45; }
+
+.fieldZoneList { display: grid; gap: 6px; max-height: 480px; overflow: auto; padding-right: 2px; }
+.fieldZoneRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  color: #142238;
+  border: 1px solid #e4eaf1;
+  border-radius: 7px;
+  background: #fbfcfe;
+  text-align: left;
+}
+.fieldZoneRow:hover { border-color: #93c5fd; background: #f8fbff; }
+.fieldZoneRow.fieldIsSelected { border-color: #2563eb; box-shadow: 0 0 0 2px #dbeafe; }
+.fieldZoneNumber { display: grid; width: 27px; height: 27px; place-items: center; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; background: #eff6ff; font-size: 10px; font-weight: 850; }
+.fieldZoneRowCopy { min-width: 0; }.fieldZoneRowCopy > b, .fieldZoneRowCopy > small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fieldZoneRowCopy > b { margin-bottom: 1px; font-size: 12px; }.fieldZoneRowCopy > small { margin-bottom: 4px; color: #64748b; font-size: 9px; }
+.fieldZoneRowCopy > span { display: flex; flex-wrap: wrap; gap: 3px 6px; }
+.fieldZoneRow em { display: grid; min-width: 18px; height: 18px; place-items: center; color: #92400e; border-radius: 999px; background: #fef3c7; font-size: 9px; font-style: normal; font-weight: 850; }
+.fieldStatus { display: inline-block; width: fit-content; max-width: 100%; color: #64748b; font-size: 9px; font-weight: 750; line-height: 1.25; }
+.fieldStatus--blue { color: #1d4ed8; }.fieldStatus--green { color: #15803d; }.fieldStatus--amber { color: #a16207; }.fieldStatus--red { color: #b42318; }.fieldStatus--neutral { color: #64748b; }
+
+.fieldPointList { margin-top: 13px; padding-top: 12px; border-top: 1px solid #e4eaf1; }
+.fieldPointList > div { display: flex; align-items: center; gap: 6px; color: #334155; font-size: 12px; }.fieldPointList > div svg { color: #2563eb; }
+.fieldPointList > div span { display: inline-grid; min-width: 18px; height: 18px; place-items: center; margin-left: auto; color: #1d4ed8; border-radius: 999px; background: #dbeafe; font-size: 10px; font-weight: 850; }
+.fieldPointList ul { display: grid; gap: 5px; max-height: 154px; margin: 8px 0 0; padding: 0; overflow: auto; list-style: none; }
+.fieldPointList li { padding: 7px; border: 1px solid #e8edf3; border-radius: 6px; background: #fbfcfe; }.fieldPointList li b, .fieldPointList li span { display: block; }.fieldPointList li b { color: #334155; font-size: 10px; }.fieldPointList li span { margin-top: 2px; color: #64748b; font-size: 9px; line-height: 1.35; overflow-wrap: anywhere; }
+.fieldPointList > p { margin: 8px 0 0; color: #64748b; font-size: 10px; line-height: 1.45; }
+
+.fieldMapHeading { align-items: center; }.fieldCoordinateLabel { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 10px; font-weight: 750; white-space: nowrap; }.fieldCoordinateLabel svg { color: #2563eb; }
+.fieldMapNote { display: flex; align-items: flex-start; gap: 6px; margin: 12px 0 10px; padding: 8px 9px; color: #475569; border-left: 3px solid #2563eb; background: #f8fbff; font-size: 11px; line-height: 1.45; }.fieldMapNote svg { flex: 0 0 auto; margin-top: 1px; color: #2563eb; }
+.fieldMapTools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }.fieldMapTools > span { display: inline-flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; color: #64748b; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }.fieldMapTools > span svg { flex: 0 0 auto; color: #2563eb; }
+.fieldMapPreparing { margin: -2px 0 10px; padding: 7px 9px; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; font-size: 10px; font-weight: 700; line-height: 1.4; }
+.fieldMapStage {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px dashed #94a3b8;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+.fieldMapStage.fieldIsPointing { cursor: crosshair; border-color: #2563eb; box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.12); }
+.fieldMapStage.fieldIsPreparing { cursor: progress; }
+.fieldMapImage { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: fill; background: #f8fafc; }
+.fieldGridPlaceholder { position: absolute; z-index: -1; inset: 0; opacity: 0.72; background-image: linear-gradient(rgba(148, 163, 184, 0.26) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.26) 1px, transparent 1px); background-size: 12.5% 16.667%; pointer-events: none; }
+.fieldMapImage + .fieldGridPlaceholder { opacity: 0.34; }
+.fieldMapPlaceholderText { position: absolute; top: 50%; left: 50%; z-index: -1; margin: 0; padding: 9px 12px; color: #475569; border: 1px solid #dce2ea; border-radius: 7px; background: rgba(255, 255, 255, 0.78); font-size: 12px; font-weight: 800; line-height: 1.4; text-align: center; transform: translate(-50%, -50%); pointer-events: none; }.fieldMapPlaceholderText span { color: #64748b; font-size: 9px; font-weight: 600; }
+.fieldZoneMarker { position: absolute; z-index: 2; display: grid; width: 34px; height: 34px; place-items: center; padding: 0; color: #1d4ed8; border: 1px solid #93c5fd; border-radius: 7px; background: rgba(239, 246, 255, 0.94); box-shadow: 0 2px 4px rgba(20, 34, 56, 0.14); transform: translate(-50%, -50%); }.fieldZoneMarker:hover { border-color: #2563eb; background: #fff; }.fieldZoneMarker.fieldIsSelected { color: #fff; border-color: #1d4ed8; background: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.24); }.fieldZoneMarker--green { color: #166534; border-color: #86efac; background: rgba(240, 253, 244, 0.94); }.fieldZoneMarker--amber { color: #92400e; border-color: #fdba74; background: rgba(255, 247, 237, 0.96); }.fieldZoneMarker.fieldIsSelected { color: #fff; border-color: #1d4ed8; background: #2563eb; }
+.fieldZoneMarker span { font-size: 10px; font-weight: 900; line-height: 1; }.fieldZoneMarker small { position: absolute; right: 2px; bottom: 1px; font-size: 7px; font-weight: 850; }.fieldZoneMarker.fieldIsSelected small { color: #dbeafe; }
+.fieldPointMarker { position: absolute; z-index: 3; display: grid; width: 29px; height: 29px; place-items: center; padding: 0; color: #b45309; border: 1px solid #fdba74; border-radius: 50% 50% 50% 0; background: #fffbeb; box-shadow: 0 2px 4px rgba(20, 34, 56, 0.14); transform: translate(-50%, -50%) rotate(-45deg); }.fieldPointMarker svg { transform: rotate(45deg); }.fieldPointMarker:hover { color: #92400e; background: #fff; }
+.fieldMapCaption { position: absolute; z-index: 4; left: 8px; padding: 4px 6px; color: #fff; border-radius: 4px; background: rgba(20, 34, 56, 0.78); font-size: 9px; font-weight: 750; pointer-events: none; }.fieldMapCaption--top { top: 8px; }.fieldMapCaption--bottom { bottom: 8px; }
+.fieldMapFootnote { margin: 10px 0 0; color: #64748b; font-size: 10px; line-height: 1.45; }
+
+.fieldDetailPanel { display: flex; flex-direction: column; gap: 14px; }
+.fieldSelectionSummary { display: flex; align-items: flex-start; gap: 9px; margin: 11px 0 8px; }.fieldSelectionSummary > span { display: grid; width: 40px; height: 40px; place-items: center; flex: 0 0 auto; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; font-size: 14px; font-weight: 850; }.fieldSelectionSummary small, .fieldSelectionSummary b { display: block; }.fieldSelectionSummary small { color: #64748b; font-size: 10px; }.fieldSelectionSummary b { margin-top: 1px; color: #142238; font-size: 13px; }.fieldSelectionSummary p { margin: 3px 0 0; color: #64748b; font-size: 9px; line-height: 1.4; }
+.fieldStatusPair { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 10px; }.fieldStatusPair .fieldStatus { padding: 4px 6px; border: 1px solid currentColor; border-radius: 4px; }
+.fieldCard { padding: 11px; border: 1px solid #e4eaf1; border-radius: 8px; background: #fbfcfe; }.fieldCard + .fieldCard { margin-top: 10px; }.fieldCard h4 { display: flex; align-items: center; gap: 6px; margin: 0; color: #334155; font-size: 12px; }.fieldCard h4 svg { color: #2563eb; }.fieldCard h4 > span { display: inline-grid; min-width: 18px; height: 18px; place-items: center; margin-left: auto; color: #1d4ed8; border-radius: 999px; background: #dbeafe; font-size: 10px; }
+.fieldFormGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }.fieldFormLabel { display: grid; gap: 4px; margin-top: 9px; color: #475569; font-size: 10px; font-weight: 750; }.fieldFormGrid .fieldFormLabel { margin-top: 0; }.fieldFormLabel input, .fieldFormLabel textarea, .fieldFormLabel select { width: 100%; min-width: 0; padding: 7px 8px; color: #142238; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; font-size: 11px; font-weight: 400; line-height: 1.4; }.fieldFormLabel select { height: 33px; }.fieldFormLabel textarea { resize: vertical; }
+.fieldConfirmFields { margin-top: 10px; padding: 9px; border: 1px solid #bbf7d0; border-radius: 7px; background: #f8fef9; }.fieldConfirmFields > p { display: flex; align-items: flex-start; gap: 5px; margin: 0 0 5px; color: #166534; font-size: 10px; line-height: 1.4; }.fieldConfirmFields > p svg { flex: 0 0 auto; margin-top: 1px; }.fieldConfirmFields .fieldFormLabel { margin-top: 7px; }
+.fieldHint { margin: 8px 0 9px; color: #64748b; font-size: 10px; line-height: 1.45; }.fieldEvidenceList { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }.fieldEvidenceList li { padding: 7px; border: 1px solid #e8edf3; border-radius: 6px; background: #fff; }.fieldEvidenceList b, .fieldEvidenceList small { display: block; }.fieldEvidenceList b { color: #334155; font-size: 10px; overflow-wrap: anywhere; }.fieldEvidenceList small { margin-top: 2px; color: #94a3b8; font-size: 9px; }.fieldEvidenceList p { margin: 4px 0 0; color: #475569; font-size: 10px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }.fieldEvidenceForm { display: grid; gap: 8px; margin-top: 11px; padding-top: 10px; border-top: 1px solid #e8edf3; }.fieldEvidenceForm .button { justify-self: start; }.fieldEmpty, .fieldEmptySmall { margin: 10px 0 0; color: #94a3b8; font-size: 10px; line-height: 1.45; }
+
+.fieldInspection { padding-top: 13px; border-top: 1px solid #dce2ea; }.fieldInspectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }.fieldInspectionHeading > span { display: inline-grid; min-width: 27px; height: 23px; place-items: center; color: #166534; border: 1px solid #bbf7d0; border-radius: 999px; background: #f0fdf4; font-size: 10px; font-weight: 850; }.fieldInspectionHeading > span.fieldIsAttention { color: #92400e; border-color: #fde68a; background: #fffbeb; }.fieldInspectionNote { margin: 10px 0; padding: 8px; color: #475569; border-left: 2px solid #f59e0b; background: #fffbeb; font-size: 10px; line-height: 1.45; }
+.fieldIssueList { display: grid; gap: 6px; }.fieldIssue { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 7px; width: 100%; padding: 8px; color: #334155; border: 1px solid #dce2ea; border-radius: 7px; background: #fff; text-align: left; }.fieldIssue:hover { border-color: #93c5fd; background: #f8fbff; }.fieldIssue > span { display: grid; width: 19px; height: 19px; place-items: center; color: #1d4ed8; border-radius: 50%; background: #dbeafe; font-size: 10px; font-weight: 900; }.fieldIssue--attention { border-color: #fde68a; background: #fffdf6; }.fieldIssue--attention > span { color: #92400e; background: #fef3c7; }.fieldIssue b { display: block; color: #334155; font-size: 10px; }.fieldIssue p { margin: 2px 0 0; color: #64748b; font-size: 9px; line-height: 1.35; }.fieldAllClear { display: flex; align-items: center; gap: 6px; margin: 0; padding: 9px; color: #166534; border: 1px solid #bbf7d0; border-radius: 7px; background: #f0fdf4; font-size: 10px; line-height: 1.4; }
+.fieldReportPreview { margin-top: 12px; padding: 10px; border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; }.fieldReportPreview > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }.fieldReportPreview h4 { margin: 0; color: #1e3a5f; font-size: 11px; }.fieldReportPreview > div:first-child span { color: #64748b; font-size: 8px; text-align: right; }.fieldReportPreview > p { margin: 5px 0 8px; color: #475569; font-size: 9px; line-height: 1.4; }.fieldReportPreview ul { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }.fieldReportPreview li { padding: 7px; border: 1px solid #cfe0ff; border-radius: 6px; background: rgba(255, 255, 255, 0.85); }.fieldReportPreview li b, .fieldReportPreview li span, .fieldReportPreview li small { display: block; }.fieldReportPreview li b { color: #1e3a5f; font-size: 10px; }.fieldReportPreview li span { margin-top: 2px; color: #475569; font-size: 9px; line-height: 1.35; }.fieldReportPreview li small { margin-top: 3px; color: #64748b; font-size: 8px; line-height: 1.35; overflow-wrap: anywhere; }.fieldLimitNote { display: block; margin-top: 9px; color: #64748b; font-size: 9px; line-height: 1.4; }.fieldReportActions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }.fieldReportActions .button { flex: 1; min-width: 0; padding: 6px; font-size: 10px; }
+
+.fieldSrOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 1180px) {
+  .fieldWorkspace { display: block; }
+  .fieldTabs { display: flex; gap: 7px; margin-bottom: 10px; }
+  .fieldTabs button { flex: 1; min-height: 37px; padding: 8px; color: #64748b; border: 1px solid #dce2ea; border-radius: 7px; background: #fff; font-size: 12px; font-weight: 800; }
+  .fieldTabs button[aria-pressed='true'] { color: #1d4ed8; border-color: #93c5fd; background: #eff6ff; }
+  .fieldWorkspace[data-tab='map'] .fieldListPanel, .fieldWorkspace[data-tab='map'] .fieldDetailPanel { display: none; }
+  .fieldWorkspace[data-tab='zones'] .fieldMapPanel { display: none; }
+  .fieldWorkspace[data-tab='zones'] .fieldInspection { display: none; }
+  .fieldWorkspace[data-tab='inspection'] .fieldListPanel, .fieldWorkspace[data-tab='inspection'] .fieldMapPanel { display: none; }
+  .fieldWorkspace[data-tab='inspection'] .fieldDetailBlock { display: none; }
+  .fieldListPanel, .fieldMapPanel, .fieldDetailPanel { max-width: 900px; }
+  .fieldDetailPanel { margin-top: 14px; }
+  .fieldWorkspace[data-tab='inspection'] .fieldDetailPanel { margin-top: 0; }
+  .fieldZoneList { max-height: none; }
+}
+
+@media (max-width: 820px) {
+  .fieldHeader { align-items: flex-start; flex-direction: column; }.fieldHeaderActions { justify-content: flex-start; }
+  .fieldOverview { align-items: flex-start; flex-direction: column; }.fieldMetrics { justify-content: flex-start; }
+  .fieldFormGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .fieldHeader { gap: 8px; min-height: 60px; }.fieldBrand p, .fieldBack { display: none; }.fieldBrand h1 { font-size: 14px; }.fieldHeaderActions { gap: 5px; }.fieldHeaderActions .button { min-height: 31px; padding: 5px 7px; font-size: 10px; }.fieldHeaderActions .button svg { display: none; }.fieldSimulation { min-height: 31px; font-size: 10px; }
+  .fieldMain { padding: 17px 14px 38px; }.fieldOverview h2 { font-size: 23px; }.fieldMetrics { width: 100%; }.fieldMetrics span { flex: 1; justify-content: center; }
+  .fieldNotice small { grid-column: 1 / -1; }.fieldMapTools { align-items: flex-start; flex-direction: column; }.fieldMapTools > span { max-width: 100%; }.fieldMapStage { aspect-ratio: 4 / 3; }.fieldZoneMarker { width: 30px; height: 30px; }.fieldMapCaption { font-size: 8px; }.fieldReportActions { display: grid; grid-template-columns: 1fr; }.fieldReportActions .button { width: 100%; }.fieldPointList ul { max-height: none; }
+}
+
+@media print {
+  .fieldHeader, .fieldOverview, .fieldNotice, .fieldTabs, .fieldListPanel, .fieldMapPanel, .fieldDetailBlock { display: none !important; }
+  .fieldShell, .fieldMain, .fieldWorkspace, .fieldDetailPanel { display: block !important; max-width: none; margin: 0; padding: 0; border: 0; box-shadow: none; background: #fff; }
+  .fieldInspection { display: block !important; padding: 0; border: 0; }.fieldReportActions { display: none; }.fieldIssue { break-inside: avoid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldZoneRow, .fieldZoneMarker { transition: none !important; }
+}
