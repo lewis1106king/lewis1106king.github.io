@@ -151,7 +151,7 @@ begin
   insert into public.profiles (id, display_name)
   values (
     new.id,
-    left(coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), split_part(new.email, '@', 1), '사용자'), 40)
+    left(coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), nullif(split_part(coalesce(new.email, ''), '@', 1), ''), '나'), 40)
   )
   on conflict (id) do update
     set display_name = excluded.display_name;
@@ -219,7 +219,7 @@ begin
   values (trim(p_title), code, auth.uid())
   returning id into mid;
   insert into public.members (mission_id, user_id, role, callsign, drone_name)
-  values (mid, auth.uid(), 'operator', '운영자', '');
+  values (mid, auth.uid(), 'operator', '나', '');
   insert into public.events (mission_id, actor_id, kind, message)
   values (mid, auth.uid(), 'mission', '임무를 만들었습니다.');
   return (select to_jsonb(m) from public.missions m where m.id = mid);
@@ -592,7 +592,30 @@ revoke all on function public.create_point(uuid, double precision, double precis
 revoke all on function public.request_handover(uuid, text, uuid) from public;
 revoke all on function public.decide_handover(uuid, boolean, text, uuid) from public;
 revoke all on function public.register_photo(uuid, text, text) from public;
+create or replace function public.rename_me(p_mission_id uuid, p_callsign text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if char_length(trim(p_callsign)) < 1 then
+    raise exception '이름을 입력하세요.';
+  end if;
+  if not public.is_member(p_mission_id) then
+    raise exception '이 수색의 참여자가 아닙니다.';
+  end if;
+  update public.members
+    set callsign = left(trim(p_callsign), 24), updated_at = now()
+    where mission_id = p_mission_id and user_id = auth.uid();
+  update public.profiles
+    set display_name = left(trim(p_callsign), 40)
+    where id = auth.uid();
+end;
+$$;
+
 revoke all on function public.mark_notifications_read(uuid) from public;
+revoke all on function public.rename_me(uuid, text) from public;
 
 grant execute on function public.is_member(uuid) to authenticated;
 grant execute on function public.is_operator(uuid) to authenticated;
@@ -606,6 +629,7 @@ grant execute on function public.request_handover(uuid, text, uuid) to authentic
 grant execute on function public.decide_handover(uuid, boolean, text, uuid) to authenticated;
 grant execute on function public.register_photo(uuid, text, text) to authenticated;
 grant execute on function public.mark_notifications_read(uuid) to authenticated;
+grant execute on function public.rename_me(uuid, text) to authenticated;
 
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
