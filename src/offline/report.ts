@@ -13,7 +13,12 @@ export type UnresolvedReport = {
 
 const cloneZone = (zone: FieldZone): FieldZone => ({
   ...zone,
-  evidence: zone.evidence.map((evidence) => ({ ...evidence })),
+  interruption: zone.interruption ? { ...zone.interruption } : null,
+  handovers: zone.handovers.map((handover) => ({ ...handover })),
+  evidence: zone.evidence.map((evidence) => ({
+    ...evidence,
+    photo: evidence.photo ? { ...evidence.photo } : null,
+  })),
 });
 
 const escapeHtml = (value: string): string => value
@@ -71,8 +76,17 @@ export function reportHtml(report: UnresolvedReport): string {
         : zoneIssues.map((issue) => `<li><strong>${escapeHtml(issue.title)}</strong>: ${escapeHtml(issue.message)}</li>`).join('');
       const evidence = zone.evidence.length === 0
         ? '<p>자료 참조: 없음</p>'
-        : `<p>자료 참조: ${zone.evidence.map((item) => `${escapeHtml(item.label)}${item.memo ? ` — ${escapeHtml(item.memo)}` : ''}`).join(' / ')}</p>`;
-      return `<li><h2>${escapeHtml(zone.id)} · 구역 ${zone.number}</h2><ul>${reasons}</ul>${evidence}</li>`;
+        : `<p>자료 참조: ${zone.evidence.map((item) => {
+          const photo = item.photo ? ` (사진 ${escapeHtml(item.photo.name)})` : '';
+          return `${escapeHtml(item.label)}${photo}${item.memo ? ` — ${escapeHtml(item.memo)}` : ''}`;
+        }).join(' / ')}</p>`;
+      const pending = zone.interruption
+        ? `<p>인계 대기: 이전 기체 ${escapeHtml(zone.interruption.fromDrone)} · 사유 ${escapeHtml(zone.interruption.reason)}</p>`
+        : '';
+      const approved = zone.handovers.length
+        ? `<p>승인 인계: ${zone.handovers.map((handover) => `${escapeHtml(handover.fromDrone)} → ${escapeHtml(handover.toDrone)} · ${escapeHtml(handover.approvalReason)}`).join(' / ')}</p>`
+        : '';
+      return `<li><h2>${escapeHtml(zone.id)} · 구역 ${zone.number}</h2><ul>${reasons}</ul>${evidence}${pending}${approved}</li>`;
     }).join('')}</ol>`;
 
   const mapName = report.mapName ? escapeHtml(report.mapName) : '선택된 도면 없음';

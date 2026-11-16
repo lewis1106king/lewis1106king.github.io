@@ -161,7 +161,7 @@
 .fieldMapImage { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: fill; background: #f8fafc; }
 .fieldGridPlaceholder { position: absolute; z-index: -1; inset: 0; opacity: 0.72; background-image: linear-gradient(rgba(148, 163, 184, 0.26) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.26) 1px, transparent 1px); background-size: 12.5% 16.667%; pointer-events: none; }
 .fieldMapImage + .fieldGridPlaceholder { opacity: 0.34; }
-.fieldMapPlaceholderText { position: absolute; top: 50%; left: 50%; z-index: -1; margin: 0; padding: 9px 12px; color: #475569; border: 1px solid #dce2ea; border-radius: 7px; background: rgba(255, 255, 255, 0.78); font-size: 12px; font-weight: 800; line-height: 1.4; text-align: center; transform: translate(-50%, -50%); pointer-events: none; }.fieldMapPlaceholderText span { color: #64748b; font-size: 9px; font-weight: 600; }
+.fieldMapPlaceholderText { position: absolute; top: 42px; left: 50%; z-index: 1; margin: 0; padding: 6px 10px; color: #475569; border: 1px solid #dce2ea; border-radius: 7px; background: rgba(255, 255, 255, 0.9); font-size: 12px; font-weight: 800; line-height: 1.4; text-align: center; transform: translateX(-50%); pointer-events: none; }
 .fieldZoneMarker { position: absolute; z-index: 2; display: grid; width: 34px; height: 34px; place-items: center; padding: 0; color: #1d4ed8; border: 1px solid #93c5fd; border-radius: 7px; background: rgba(239, 246, 255, 0.94); box-shadow: 0 2px 4px rgba(20, 34, 56, 0.14); transform: translate(-50%, -50%); }.fieldZoneMarker:hover { border-color: #2563eb; background: #fff; }.fieldZoneMarker.fieldIsSelected { color: #fff; border-color: #1d4ed8; background: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.24); }.fieldZoneMarker--green { color: #166534; border-color: #86efac; background: rgba(240, 253, 244, 0.94); }.fieldZoneMarker--amber { color: #92400e; border-color: #fdba74; background: rgba(255, 247, 237, 0.96); }.fieldZoneMarker.fieldIsSelected { color: #fff; border-color: #1d4ed8; background: #2563eb; }
 .fieldZoneMarker span { font-size: 10px; font-weight: 900; line-height: 1; }.fieldZoneMarker small { position: absolute; right: 2px; bottom: 1px; font-size: 7px; font-weight: 850; }.fieldZoneMarker.fieldIsSelected small { color: #dbeafe; }
 .fieldPointMarker { position: absolute; z-index: 3; display: grid; width: 29px; height: 29px; place-items: center; padding: 0; color: #b45309; border: 1px solid #fdba74; border-radius: 50% 50% 50% 0; background: #fffbeb; box-shadow: 0 2px 4px rgba(20, 34, 56, 0.14); transform: translate(-50%, -50%) rotate(-45deg); }.fieldPointMarker svg { transform: rotate(45deg); }.fieldPointMarker:hover { color: #92400e; background: #fff; }
@@ -214,6 +214,53 @@
   .fieldHeader, .fieldOverview, .fieldNotice, .fieldTabs, .fieldListPanel, .fieldMapPanel, .fieldDetailBlock { display: none !important; }
   .fieldShell, .fieldMain, .fieldWorkspace, .fieldDetailPanel { display: block !important; max-width: none; margin: 0; padding: 0; border: 0; box-shadow: none; background: #fff; }
   .fieldInspection { display: block !important; padding: 0; border: 0; }.fieldReportActions { display: none; }.fieldIssue { break-inside: avoid; }
+}
+
+.fieldModeSwitch { display: inline-flex; padding: 3px; border: 1px solid #dce2ea; border-radius: 9px; background: #fff; }
+.fieldModeSwitch button { min-height: 32px; padding: 6px 10px; color: #526177; border: 0; border-radius: 7px; background: transparent; font-size: 12px; font-weight: 800; }
+.fieldModeSwitch button[aria-pressed='true'] { color: #fff; background: #2563eb; }
+.fieldOnline { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: #1e40af; font-size: 12px; font-weight: 750; }
+.fieldOnline.is-offline { color: #92400e; }
+.fieldToolbar { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1580px; margin: 0 auto; padding: 12px clamp(16px, 3vw, 42px) 0; }
+.fieldLoading { margin: 32px 0; color: #526177; }
+.fieldDroneSummary { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.fieldDroneSummary span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; color: #526177; border: 1px solid #e4eaf1; border-radius: 999px; background: #f8fafc; font-size: 12px; }
+.fieldDroneSummary b { color: #142238; }
+.fieldTextButton { margin-left: 6px; padding: 0; color: #2563eb; border: 0; background: transparent; font-size: 12px; font-weight: 800; }
+.fieldPointForm, .fieldHandover { display: grid; gap: 8px; margin-top: 12px; }
+.fieldPointForm { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; }
+.fieldPointForm label, .fieldPointList label { display: grid; gap: 4px; color: #475569; font-size: 12px; font-weight: 750; }
+.fieldPointForm input, .fieldPointList input { width: 100%; min-width: 0; padding: 7px 8px; color: #142238; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; font-size: 13px; }
+.fieldPointList li { display: grid; gap: 6px; }
+.fieldHandover dl { display: grid; gap: 6px; margin: 0; }
+.fieldHandover div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
+.fieldHandover dt { color: #64748b; font-size: 12px; font-weight: 750; }
+.fieldHandover dd { margin: 0; color: #142238; font-size: 13px; overflow-wrap: anywhere; }
+.fieldCheck { display: flex; align-items: flex-start; gap: 8px; color: #334155; font-size: 13px; line-height: 1.45; }
+.fieldCheck input { width: 16px; height: 16px; margin-top: 2px; accent-color: #2563eb; }
+.fieldInlineActions, .fieldFileRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fieldFileRow span { color: #526177; font-size: 12px; overflow-wrap: anywhere; }
+.fieldEvidenceList img { display: block; width: 100%; max-height: 180px; margin-bottom: 6px; object-fit: cover; border-radius: 6px; background: #e8edf3; }
+.fieldDialog { width: min(100%, 460px); padding: 22px; border: 1px solid #dce2ea; border-radius: 12px; color: #142238; }
+.fieldDialog::backdrop { background: rgba(20, 34, 56, 0.42); }
+.fieldDialog h2 { margin-bottom: 8px; font-size: 20px; letter-spacing: -0.04em; }
+.fieldDialog p { margin-bottom: 16px; color: #526177; font-size: 14px; line-height: 1.55; }
+.fieldStatus, .fieldZoneRowCopy > small, .fieldHint, .fieldPanelDescription, .fieldMapNote, .fieldInspectionNote, .fieldMapFootnote, .fieldNotice, .fieldIssue p, .fieldEvidenceList p, .fieldEvidenceList small { font-size: 12px; }
+.fieldZoneRowCopy > b, .fieldCard h4, .fieldFormLabel { font-size: 13px; }
+.fieldFormLabel input, .fieldFormLabel textarea, .fieldFormLabel select { font-size: 14px; }
+
+@media (max-width: 820px) {
+  .fieldPointForm { grid-template-columns: 1fr 1fr; }
+  .fieldHeader { align-items: flex-start; }
+  .fieldOnline { width: 100%; }
+}
+
+@media (max-width: 560px) {
+  .fieldBrand p, .fieldBack { display: inline-flex; }
+  .fieldBack { font-size: 13px; }
+  .fieldToolbar .button { min-height: 40px; font-size: 13px; }
+  .fieldToolbar .button svg { display: inline; }
+  .fieldHandover div { grid-template-columns: 1fr; gap: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

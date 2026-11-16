@@ -137,40 +137,40 @@ export default function GcsPage({ onBack }: GcsPageProps) {
           <div className="flex items-center gap-2">
             <span className="grid h-6 w-6 place-items-center border border-slate-700 bg-slate-900 text-[11px] font-semibold tracking-tight text-slate-100">S?</span>
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-[11px] font-medium tracking-[0.08em] text-slate-200">FLEET GCS</p>
-              <p className="hidden text-[9px] tracking-wide text-slate-500 sm:block">SIMULATION OPERATIONS</p>
+              <p className="truncate text-[11px] font-medium tracking-[0.08em] text-slate-200">가상 편대 화면</p>
+              <p className="hidden text-[9px] tracking-wide text-slate-500 sm:block">샘플 데이터 · 조종 없음</p>
             </div>
           </div>
           <span className="hidden items-center gap-1.5 border-l border-slate-800 pl-3 text-[10px] text-slate-400 md:inline-flex">
-            <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> SYSTEM NOMINAL
+            <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> 화면 정상 · 실기체 아님
           </span>
-          <span className="gcs-simulation-label whitespace-nowrap text-[9px] tracking-wide text-slate-500">SIM · NO CMD</span>
+          <span className="gcs-simulation-label whitespace-nowrap text-[9px] tracking-wide text-slate-500">가상 · 명령 없음</span>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
-          <span className="hidden items-center gap-1.5 text-[10px] text-slate-400 lg:inline-flex"><Satellite size={13} className="text-slate-500" /> GPS 18 / 18</span>
-          <span className="hidden items-center gap-1.5 text-[10px] text-slate-400 md:inline-flex"><Radio size={13} className="text-slate-500" /> LINK STABLE</span>
+          <span className="hidden items-center gap-1.5 text-[10px] text-slate-400 lg:inline-flex"><Satellite size={13} className="text-slate-500" /> 샘플 위성 18 / 18</span>
+          <span className="hidden items-center gap-1.5 text-[10px] text-slate-400 md:inline-flex"><Radio size={13} className="text-slate-500" /> 샘플 링크</span>
           <button type="button" className="gcs-header-button" onClick={() => notify('가상 작업 대기열을 새로 고쳤습니다. 실제 기체에는 전송되지 않습니다.')}>
-            <Settings2 size={14} /><span className="hidden sm:inline">Fleet actions</span>
+            <Settings2 size={14} /><span className="hidden sm:inline">가상 작업</span>
           </button>
           <button type="button" onClick={() => notify('비상 동작은 시연 모드에서 차단되었습니다. 실제 기체에는 명령이 전송되지 않습니다.')} className="inline-flex h-7 items-center gap-1.5 border border-rose-500/50 px-2.5 text-[10px] font-medium text-rose-300 transition-colors hover:border-rose-400 hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
-            <TriangleAlert size={13} /> EMERGENCY
+            <TriangleAlert size={13} /> 비상
           </button>
         </div>
       </header>
 
-      <nav className="gcs-mobile-tabs" aria-label="GCS 보조 패널">
-        <button type="button" aria-pressed={compactPanel === 'fleet'} onClick={() => setCompactPanel('fleet')}>Fleet</button>
-        <button type="button" aria-pressed={compactPanel === 'airspace'} onClick={() => setCompactPanel('airspace')}>Airspace</button>
-        <button type="button" aria-pressed={compactPanel === 'focus'} onClick={() => setCompactPanel('focus')}>Focus</button>
+      <nav className="gcs-mobile-tabs" aria-label="가상 화면 보조 패널">
+        <button type="button" aria-pressed={compactPanel === 'fleet'} onClick={() => setCompactPanel('fleet')}>편대</button>
+        <button type="button" aria-pressed={compactPanel === 'airspace'} onClick={() => setCompactPanel('airspace')}>공역</button>
+        <button type="button" aria-pressed={compactPanel === 'focus'} onClick={() => setCompactPanel('focus')}>선택 기체</button>
       </nav>
 
       <section className={`gcs-main-grid gcs-panel-${compactPanel} grid h-[calc(100dvh-48px)] min-h-0 grid-cols-[minmax(190px,1fr)_minmax(0,3fr)_minmax(220px,1fr)]`}>
         <aside className="gcs-fleet-panel flex min-h-0 flex-col border-r border-slate-800/50 bg-slate-950/20">
           <div className="flex items-center justify-between border-b border-slate-800/50 px-3 py-3">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">Fleet Navigator</p>
-              <p className="mt-1 text-[11px] text-slate-400">4 assets · 3 airborne</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">편대 목록</p>
+              <p className="mt-1 text-[11px] text-slate-400">샘플 4대 · 비행 표시 3대</p>
             </div>
             <Signal size={15} className="text-slate-600" />
           </div>
@@ -178,7 +178,7 @@ export default function GcsPage({ onBack }: GcsPageProps) {
             {fleetDrones.map((drone) => <FleetCard key={drone.id} drone={drone} selected={drone.id === selected.id} onSelect={() => { setSelectedId(drone.id); setCompactPanel('airspace'); }} />)}
           </div>
           <div className="gcs-fleet-note mt-auto border-t border-slate-800/50 px-3 py-3 text-[10px] text-slate-500">
-            <p className="mb-1.5 uppercase tracking-[0.12em]">Operational note</p>
+            <p className="mb-1.5 uppercase tracking-[0.12em]">운영 메모</p>
             <p className="leading-relaxed">가상 플릿 상태입니다. 위치·영상·텔레메트리는 실제 항공기 데이터가 아닙니다.</p>
           </div>
         </aside>
@@ -192,21 +192,21 @@ export default function GcsPage({ onBack }: GcsPageProps) {
             })}
             <path d="M172 108 L360 108" fill="none" stroke="#1e293b" strokeWidth="1" />
             <path d="M740 116 L906 116" fill="none" stroke="#1e293b" strokeWidth="1" />
-            <text x="72" y="598" fill="#475569" fontSize="11" letterSpacing="2">OPS GRID · SIMULATED AIRSPACE</text>
-            <text x="848" y="598" fill="#475569" fontSize="11">N 37° 30' 42.6&quot;</text>
+            <text x="72" y="598" fill="#475569" fontSize="11" letterSpacing="1">가상 공역 · 실제 좌표 아님</text>
+            <text x="780" y="598" fill="#475569" fontSize="11">샘플 좌표</text>
           </svg>
 
           <div className="absolute left-3 top-3 flex items-center gap-1 border border-slate-700/60 bg-[#0b0f19]/75 p-1 backdrop-blur-md">
-            <button type="button" className={`gcs-map-control ${layerMode === 'ops' ? 'bg-slate-700/70 text-slate-100' : ''}`} onClick={() => setLayerMode('ops')}><Layers size={14} /> Operations</button>
-            <button type="button" className={`gcs-map-control ${layerMode === 'terrain' ? 'bg-slate-700/70 text-slate-100' : ''}`} onClick={() => setLayerMode('terrain')}><MapPinned size={14} /> Terrain</button>
+            <button type="button" className={`gcs-map-control ${layerMode === 'ops' ? 'bg-slate-700/70 text-slate-100' : ''}`} onClick={() => setLayerMode('ops')}><Layers size={14} /> 작업 구역</button>
+            <button type="button" className={`gcs-map-control ${layerMode === 'terrain' ? 'bg-slate-700/70 text-slate-100' : ''}`} onClick={() => setLayerMode('terrain')}><MapPinned size={14} /> 지형 참고</button>
           </div>
           <div className="absolute right-3 top-3 flex flex-col border border-slate-700/60 bg-[#0b0f19]/75 p-1 backdrop-blur-md">
             <button type="button" className="gcs-square-control" onClick={() => notify('선택 기체 기준으로 지도 위치를 다시 맞췄습니다.')} aria-label="선택 기체 중심으로 이동"><LocateFixed size={15} /></button>
             <button type="button" className="gcs-square-control" onClick={() => notify('표시 필터를 열었습니다. 시연 모드에서는 필터값이 변경되지 않습니다.')} aria-label="표시 필터"><SlidersHorizontal size={15} /></button>
           </div>
           <div className="absolute bottom-3 left-3 border border-slate-700/60 bg-[#0b0f19]/75 px-2.5 py-2 backdrop-blur-md">
-            <p className="text-[9px] uppercase tracking-[0.14em] text-slate-500">Map layer</p>
-            <p className="mt-1 text-[11px] font-medium text-slate-300">{layerMode === 'ops' ? 'Operation sectors' : 'Terrain reference'} · 1:4,800</p>
+            <p className="text-[9px] uppercase tracking-[0.14em] text-slate-500">지도 층</p>
+            <p className="mt-1 text-[11px] font-medium text-slate-300">{layerMode === 'ops' ? '작업 구역' : '지형 참고'} · 샘플 축척</p>
           </div>
 
           {fleetDrones.map((drone) => {
@@ -229,7 +229,7 @@ export default function GcsPage({ onBack }: GcsPageProps) {
           })}
 
           <div className="gcs-compact-summary absolute bottom-3 right-3 border border-slate-700/60 bg-[#0b0f19]/85 p-3 backdrop-blur-md">
-            <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Focused asset</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500">선택한 기체</p>
             <div className="mt-1.5 flex items-center justify-between gap-6"><span className="text-sm font-medium">{selected.callsign}</span><span className={`text-[10px] ${selectedTone.text}`}>{selected.stateLabel}</span></div>
             <p className="gcs-numeric mt-1 text-[11px] text-slate-400">{selected.altitude}m · {selected.speed}m/s · {selected.battery}%</p>
           </div>
@@ -239,7 +239,7 @@ export default function GcsPage({ onBack }: GcsPageProps) {
           <div className="border-b border-slate-800/50 px-3 py-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">Focus Hub</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">선택 기체</p>
                 <p className="mt-1 text-sm font-medium text-slate-200">{selected.callsign} <span className="gcs-numeric text-[10px] text-slate-500">{selected.id}</span></p>
               </div>
               <span className={`inline-flex items-center gap-1.5 text-[10px] ${selectedTone.text}`}><i className={`h-1.5 w-1.5 rounded-full ${selectedTone.dot}`} />{selected.stateLabel}</span>
@@ -248,35 +248,35 @@ export default function GcsPage({ onBack }: GcsPageProps) {
 
           <div className="gcs-focus-video gcs-fpv-grid mx-3 mt-3 aspect-[16/9] border border-slate-800/80 bg-slate-900/60">
             <div className="flex h-full flex-col justify-between p-2.5 text-[9px] text-slate-500">
-              <div className="flex justify-between"><span>FPV / {selected.payload}</span><span className="gcs-numeric">1080P · SIM</span></div>
+              <div className="flex justify-between"><span>시점 / {selected.payload}</span><span className="gcs-numeric">샘플 영상</span></div>
               <div className="flex items-center justify-between"><Eye size={14} /><span className="gcs-numeric">{selected.coordinates}</span></div>
             </div>
             <span className="gcs-reticle" aria-hidden="true" />
-            <span className="absolute bottom-2 left-2 text-[9px] text-slate-500">No live video source</span>
+            <span className="absolute bottom-2 left-2 text-[9px] text-slate-500">실시간 영상 없음</span>
           </div>
 
           <div className="gcs-focus-metrics grid grid-cols-2 gap-x-3 px-3 pt-2.5">
-            <TelemetryMetric label="Altitude" value={selected.altitude} unit="m AGL" />
-            <TelemetryMetric label="Ground speed" value={selected.speed} unit="m/s" />
-            <TelemetryMetric label="Heading" value={selected.heading} unit="°" />
-            <TelemetryMetric label="Mission ETA" value={selected.eta} unit="min" />
+            <TelemetryMetric label="고도" value={selected.altitude} unit="m · 샘플" />
+            <TelemetryMetric label="대지 속도" value={selected.speed} unit="m/s · 샘플" />
+            <TelemetryMetric label="기수" value={selected.heading} unit="° · 샘플" />
+            <TelemetryMetric label="남은 시간" value={selected.eta} unit="분 · 샘플" />
           </div>
 
           <div className="gcs-focus-chart mx-3 mt-2 border border-slate-800/70 bg-slate-900/35 p-2.5">
-            <div className="mb-2 flex items-center justify-between"><span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-slate-500"><Gauge size={12} /> Altitude trend</span><span className="gcs-numeric text-[10px] text-slate-400">09:24:18 UTC</span></div>
+            <div className="mb-2 flex items-center justify-between"><span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-slate-500"><Gauge size={12} /> 고도 추세 · 샘플</span><span className="gcs-numeric text-[10px] text-slate-400">09:24:18 UTC</span></div>
             <FlightPathChart tone={selectedTone.line} />
           </div>
 
           <div className="gcs-focus-power mx-3 mt-2 grid grid-cols-2 gap-2 border-t border-slate-800/50 pt-3 text-[10px] text-slate-400">
-            <div><p className="mb-1 text-slate-500">BATTERY</p><BatteryLine value={selected.battery} /></div>
-            <div><p className="mb-1 text-slate-500">LINK</p><span className="inline-flex items-center gap-1.5"><MiniBars value={selected.signal} tone={selectedTone.dot} /><b className="gcs-numeric font-medium text-slate-300">{selected.signal}%</b></span></div>
+            <div><p className="mb-1 text-slate-500">배터리 · 샘플</p><BatteryLine value={selected.battery} /></div>
+            <div><p className="mb-1 text-slate-500">링크 · 샘플</p><span className="inline-flex items-center gap-1.5"><MiniBars value={selected.signal} tone={selectedTone.dot} /><b className="gcs-numeric font-medium text-slate-300">{selected.signal}%</b></span></div>
           </div>
 
           <div className="gcs-focus-actions mt-auto border-t border-slate-800/50 p-3">
-            <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-slate-500">Master action</p>
+            <p className="mb-2 text-[10px] uppercase tracking-[0.12em] text-slate-500">화면 조작</p>
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => { setIsPaused((value) => !value); notify(isPaused ? `${selected.callsign}의 가상 임무 표시를 재개했습니다.` : `${selected.callsign}의 가상 임무 표시를 일시 정지했습니다.`); }} className="gcs-action-button"><Pause size={13} /> {isPaused ? 'Resume view' : 'Pause view'}</button>
-              <button type="button" onClick={() => notify('가상 복귀 검토가 기록되었습니다. 실제 경로는 변경되지 않습니다.')} className="gcs-action-button"><Compass size={13} /> Review RTB</button>
+              <button type="button" onClick={() => { setIsPaused((value) => !value); notify(isPaused ? `${selected.callsign}의 가상 임무 표시를 재개했습니다.` : `${selected.callsign}의 가상 임무 표시를 일시 정지했습니다.`); }} className="gcs-action-button"><Pause size={13} /> {isPaused ? '표시 재개' : '표시 멈춤'}</button>
+              <button type="button" onClick={() => notify('가상 복귀 검토가 기록되었습니다. 실제 경로는 변경되지 않습니다.')} className="gcs-action-button"><Compass size={13} /> 복귀 검토</button>
             </div>
             <p className="mt-2 flex items-start gap-1.5 text-[9px] leading-relaxed text-slate-500"><CircleAlert size={11} className="mt-0.5 shrink-0" /> 모든 버튼은 가상 인터페이스만 변경합니다. 실제 비행 제어는 연결되지 않았습니다.</p>
           </div>

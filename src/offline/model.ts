@@ -1,7 +1,9 @@
 import { createInitialDemo } from '../data';
 import type { DroneId, ObservationStatus, TaskStatus } from '../types';
 
-export type FieldMap = {
+export type FieldMap = FieldImage;
+
+export type FieldImage = {
   name: string;
   mime: 'image/png' | 'image/jpeg' | 'image/webp';
   dataUrl: string;
@@ -13,6 +15,25 @@ export type FieldEvidence = {
   label: string;
   memo: string;
   addedAt: string;
+  photo: FieldImage | null;
+};
+
+export type FieldHandover = {
+  id: string;
+  fromDrone: DroneId;
+  toDrone: DroneId;
+  previousStatus: 'assigned' | 'in_progress';
+  interruptionReason: string;
+  approvalReason: string;
+  approvedBy: string;
+  approvedAt: string;
+};
+
+export type FieldInterruption = {
+  fromDrone: DroneId;
+  previousStatus: 'assigned' | 'in_progress';
+  reason: string;
+  at: string;
 };
 
 export type FieldZone = {
@@ -28,6 +49,8 @@ export type FieldZone = {
   confirmedAt: string | null;
   evidence: FieldEvidence[];
   memo: string;
+  interruption: FieldInterruption | null;
+  handovers: FieldHandover[];
   updatedAt: string;
 };
 
@@ -55,6 +78,7 @@ export type ProjectLoad =
   | { ok: false; message: string };
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 1024 * 1024;
 export const MAX_PROJECT_BYTES = 5 * 1024 * 1024;
 
 const droneIds: readonly DroneId[] = ['A', 'B', 'C'];
@@ -131,18 +155,51 @@ function decodedBase64ByteLength(payload: string): number | null {
   return (payload.length / 4) * 3 - padding;
 }
 
-function isValidMap(value: unknown): value is FieldMap {
+export function dataUrlPayloadBytes(dataUrl: string, mime: string): number | null {
+  const prefix = `data:${mime};base64,`;
+  if (!dataUrl.startsWith(prefix)) return null;
+  return decodedBase64ByteLength(dataUrl.slice(prefix.length));
+}
+
+export function isFieldImage(value: unknown, maxBytes = MAX_IMAGE_BYTES): value is FieldImage {
   if (!isRecord(value)
     || !isNonEmptyString(value.name)
     || !isString(value.mime)
     || !isSupportedMapType(value.mime)
     || !isString(value.dataUrl)
-    || !isMapByteCount(value.bytes)) return false;
+    || !isMapByteCount(value.bytes)
+    || value.bytes > maxBytes) return false;
 
-  const prefix = `data:${value.mime};base64,`;
-  if (!value.dataUrl.startsWith(prefix)) return false;
-  const decodedBytes = decodedBase64ByteLength(value.dataUrl.slice(prefix.length));
-  return decodedBytes !== null && decodedBytes === value.bytes && decodedBytes <= MAX_IMAGE_BYTES;
+  const decodedBytes = dataUrlPayloadBytes(value.dataUrl, value.mime);
+  return decodedBytes !== null && decodedBytes === value.bytes;
+}
+
+function isValidMap(value: unknown): value is FieldMap {
+  return isFieldImage(value, MAX_IMAGE_BYTES);
+}
+
+function isValidPhoto(value: unknown): value is FieldImage {
+  return isFieldImage(value, MAX_PHOTO_BYTES);
+}
+
+function isInterruption(value: unknown): value is FieldInterruption {
+  return isRecord(value)
+    && isDroneId(value.fromDrone)
+    && (value.previousStatus === 'assigned' || value.previousStatus === 'in_progress')
+    && isNonEmptyString(value.reason)
+    && isIsoDate(value.at);
+}
+
+function isHandover(value: unknown): value is FieldHandover {
+  return isRecord(value)
+    && isNonEmptyString(value.id)
+    && isDroneId(value.fromDrone)
+    && isDroneId(value.toDrone)
+    && (value.previousStatus === 'assigned' || value.previousStatus === 'in_progress')
+    && isNonEmptyString(value.interruptionReason)
+    && isNonEmptyString(value.approvalReason)
+    && isNonEmptyString(value.approvedBy)
+    && isIsoDate(value.approvedAt);
 }
 
 function cloneProject(project: OfflineProject): OfflineProject {
@@ -151,7 +208,12 @@ function cloneProject(project: OfflineProject): OfflineProject {
     map: project.map ? { ...project.map } : null,
     zones: project.zones.map((zone) => ({
       ...zone,
-      evidence: zone.evidence.map((evidence) => ({ ...evidence })),
+      interruption: zone.interruption ? { ...zone.interruption } : null,
+      handovers: zone.handovers.map((handover) => ({ ...handover })),
+      evidence: zone.evidence.map((evidence) => ({
+        ...evidence,
+        photo: evidence.photo ? { ...evidence.photo } : null,
+      })),
     })),
     points: project.points.map((point) => ({ ...point })),
   };
@@ -182,7 +244,7 @@ export function createOfflineProject(): OfflineProject {
   const demo = createInitialDemo();
   return {
     version: 1,
-    title: '오프라인 현장 수색 상황판',
+    title: '연습 수색 기록',
     createdAt: timestamp,
     updatedAt: timestamp,
     map: null,
@@ -204,8 +266,41 @@ export function createOfflineProject(): OfflineProject {
         label: evidence.label,
         memo: evidence.memo,
         addedAt: timestamp,
+        photo: null,
       })),
       memo: zone.note,
+      interruption: null,
+      handovers: [],
+      updatedAt: timestamp,
+    })),
+    points: [],
+  };
+}
+
+/** 담당·자료·메모가 없는 12개 구역으로 현장 기록을 시작한다. */
+export function createEmptyProject(): OfflineProject {
+  const timestamp = now();
+  return {
+    version: 1,
+    title: '현장 수색 기록',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    map: null,
+    zones: zoneIds.map((id, index) => ({
+      id,
+      number: index + 1,
+      x: zoneLayouts[index]?.x ?? 50,
+      y: zoneLayouts[index]?.y ?? 50,
+      droneId: null,
+      taskStatus: 'unassigned',
+      observationStatus: 'unverified',
+      reviewReason: '',
+      confirmedBy: null,
+      confirmedAt: null,
+      evidence: [],
+      memo: '',
+      interruption: null,
+      handovers: [],
       updatedAt: timestamp,
     })),
     points: [],
@@ -228,6 +323,7 @@ export function validateOfflineProject(value: unknown): value is OfflineProject 
   const seenZoneIds = new Set<string>();
   const seenZoneNumbers = new Set<number>();
   const seenEvidenceIds = new Set<string>();
+  const seenHandoverIds = new Set<string>();
 
   for (const zone of value.zones) {
     if (!isRecord(zone)
@@ -246,6 +342,9 @@ export function validateOfflineProject(value: unknown): value is OfflineProject 
       || (zone.confirmedAt !== null && !isIsoDate(zone.confirmedAt))
       || !Array.isArray(zone.evidence)
       || !isString(zone.memo)
+      || (zone.interruption !== null && !isInterruption(zone.interruption))
+      || (zone.interruption !== null && zone.taskStatus !== 'interrupted')
+      || !Array.isArray(zone.handovers)
       || !isIsoDate(zone.updatedAt)) return false;
 
     seenZoneIds.add(zone.id);
@@ -256,8 +355,13 @@ export function validateOfflineProject(value: unknown): value is OfflineProject 
         || seenEvidenceIds.has(evidence.id)
         || !isNonEmptyString(evidence.label)
         || !isString(evidence.memo)
+        || (evidence.photo !== null && !isValidPhoto(evidence.photo))
         || !isIsoDate(evidence.addedAt)) return false;
       seenEvidenceIds.add(evidence.id);
+    }
+    for (const handover of zone.handovers) {
+      if (!isHandover(handover) || seenHandoverIds.has(handover.id)) return false;
+      seenHandoverIds.add(handover.id);
     }
   }
 
@@ -278,6 +382,24 @@ export function validateOfflineProject(value: unknown): value is OfflineProject 
   return true;
 }
 
+function normalizeProject(value: unknown): unknown {
+  if (!isRecord(value) || !Array.isArray(value.zones)) return value;
+  return {
+    ...value,
+    zones: value.zones.map((zone) => {
+      if (!isRecord(zone)) return zone;
+      return {
+        ...zone,
+        interruption: zone.interruption === undefined ? null : zone.interruption,
+        handovers: zone.handovers === undefined ? [] : zone.handovers,
+        evidence: Array.isArray(zone.evidence)
+          ? zone.evidence.map((item) => (isRecord(item) && item.photo === undefined ? { ...item, photo: null } : item))
+          : zone.evidence,
+      };
+    }),
+  };
+}
+
 export function parseOfflineProject(text: string, bytes?: number): ProjectLoad {
   const actualBytes = utf8Bytes(text);
   if (bytes !== undefined && (!Number.isSafeInteger(bytes) || bytes < 0)) {
@@ -289,7 +411,7 @@ export function parseOfflineProject(text: string, bytes?: number): ProjectLoad {
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text) as unknown;
+    parsed = normalizeProject(JSON.parse(text) as unknown);
   } catch {
     return { ok: false, message: '프로젝트 JSON을 읽을 수 없습니다.' };
   }
@@ -326,6 +448,12 @@ export function updateZone(
   if (index < 0) throw new Error('존재하지 않는 구역입니다.');
 
   const zone = next.zones[index];
+  if (zone.interruption && patch.droneId !== undefined && patch.droneId !== zone.droneId) {
+    throw new Error('인계 대기 중에는 승인으로만 담당 기체를 바꿉니다.');
+  }
+  if (zone.interruption && patch.taskStatus !== undefined && patch.taskStatus !== 'interrupted') {
+    throw new Error('인계 대기 중입니다. 승인하거나 중단을 취소한 뒤 작업 상태를 바꾸세요.');
+  }
   const updated: FieldZone = { ...zone };
   if (patch.droneId !== undefined) updated.droneId = patch.droneId;
   if (patch.taskStatus !== undefined) updated.taskStatus = patch.taskStatus;
@@ -360,6 +488,7 @@ export function addEvidence(
     label,
     memo: input.memo,
     addedAt: timestamp,
+    photo: null,
   });
   zone.updatedAt = timestamp;
   next.updatedAt = timestamp;
@@ -391,6 +520,160 @@ export function addInterestPoint(
   next.updatedAt = timestamp;
   requireProject(next);
   requireProjectSize(next);
+  return next;
+}
+
+export function addPhotoEvidence(
+  project: OfflineProject,
+  zoneId: string,
+  input: { label: string; memo: string; photo: FieldImage },
+): OfflineProject {
+  requireProject(project);
+  if (!isValidPhoto(input.photo)) {
+    throw new Error('사진은 PNG, JPEG 또는 WebP 형식의 1MB 이하 이미지여야 합니다.');
+  }
+  const label = input.label.trim() || input.photo.name;
+  const next = cloneProject(project);
+  const zone = next.zones.find((candidate) => candidate.id === zoneId);
+  if (!zone) throw new Error('존재하지 않는 구역입니다.');
+  const timestamp = now();
+  const used = new Set(next.zones.flatMap((candidate) => candidate.evidence.map((evidence) => evidence.id)));
+  zone.evidence.push({
+    id: generatedId('EVIDENCE', used),
+    label,
+    memo: input.memo,
+    addedAt: timestamp,
+    photo: { ...input.photo, name: input.photo.name.trim() || label },
+  });
+  zone.updatedAt = timestamp;
+  next.updatedAt = timestamp;
+  requireProject(next);
+  requireProjectSize(next);
+  return next;
+}
+
+export function removeEvidence(project: OfflineProject, zoneId: string, evidenceId: string): OfflineProject {
+  requireProject(project);
+  const next = cloneProject(project);
+  const zone = next.zones.find((candidate) => candidate.id === zoneId);
+  if (!zone) throw new Error('존재하지 않는 구역입니다.');
+  const before = zone.evidence.length;
+  zone.evidence = zone.evidence.filter((evidence) => evidence.id !== evidenceId);
+  if (zone.evidence.length === before) throw new Error('삭제할 자료를 찾지 못했습니다.');
+  const timestamp = now();
+  zone.updatedAt = timestamp;
+  next.updatedAt = timestamp;
+  requireProject(next);
+  return next;
+}
+
+export function interruptZone(project: OfflineProject, zoneId: string, reason: string): OfflineProject {
+  requireProject(project);
+  const interruptionReason = reason.trim();
+  if (!interruptionReason) throw new Error('중단 사유를 입력하세요.');
+  const next = cloneProject(project);
+  const zone = next.zones.find((candidate) => candidate.id === zoneId);
+  if (!zone) throw new Error('존재하지 않는 구역입니다.');
+  if (zone.interruption) throw new Error('이미 인계를 기다리는 구역입니다. 승인하거나 중단을 취소하세요.');
+  if (!zone.droneId) throw new Error('담당 기체가 없는 구역은 중단 인계를 시작할 수 없습니다.');
+  if (zone.taskStatus !== 'assigned' && zone.taskStatus !== 'in_progress') {
+    throw new Error('배정됨 또는 진행 중인 작업만 중단할 수 있습니다.');
+  }
+  const timestamp = now();
+  zone.interruption = {
+    fromDrone: zone.droneId,
+    previousStatus: zone.taskStatus,
+    reason: interruptionReason,
+    at: timestamp,
+  };
+  zone.taskStatus = 'interrupted';
+  zone.updatedAt = timestamp;
+  next.updatedAt = timestamp;
+  requireProject(next);
+  requireProjectSize(next);
+  return next;
+}
+
+export function approveHandover(
+  project: OfflineProject,
+  zoneId: string,
+  input: { toDrone: DroneId; approvalReason: string; approvedBy: string },
+): OfflineProject {
+  requireProject(project);
+  const approvalReason = input.approvalReason.trim();
+  const approvedBy = input.approvedBy.trim();
+  if (!approvalReason) throw new Error('승인 사유를 입력하세요.');
+  if (!approvedBy) throw new Error('승인자를 입력하세요.');
+  if (!isDroneId(input.toDrone)) throw new Error('새 담당 기체를 선택하세요.');
+  const next = cloneProject(project);
+  const zone = next.zones.find((candidate) => candidate.id === zoneId);
+  if (!zone?.interruption) throw new Error('승인할 중단 작업이 없습니다.');
+  const timestamp = now();
+  const used = new Set(next.zones.flatMap((candidate) => candidate.handovers.map((handover) => handover.id)));
+  zone.handovers.push({
+    id: generatedId('HANDOVER', used),
+    fromDrone: zone.interruption.fromDrone,
+    toDrone: input.toDrone,
+    previousStatus: zone.interruption.previousStatus,
+    interruptionReason: zone.interruption.reason,
+    approvalReason,
+    approvedBy,
+    approvedAt: timestamp,
+  });
+  zone.droneId = input.toDrone;
+  zone.taskStatus = 'assigned';
+  zone.interruption = null;
+  zone.updatedAt = timestamp;
+  next.updatedAt = timestamp;
+  requireProject(next);
+  requireProjectSize(next);
+  return next;
+}
+
+export function cancelInterruption(project: OfflineProject, zoneId: string): OfflineProject {
+  requireProject(project);
+  const next = cloneProject(project);
+  const zone = next.zones.find((candidate) => candidate.id === zoneId);
+  if (!zone?.interruption) throw new Error('취소할 중단 대기가 없습니다.');
+  const timestamp = now();
+  zone.droneId = zone.interruption.fromDrone;
+  zone.taskStatus = zone.interruption.previousStatus;
+  zone.interruption = null;
+  zone.updatedAt = timestamp;
+  next.updatedAt = timestamp;
+  requireProject(next);
+  return next;
+}
+
+export function updateInterestPoint(
+  project: OfflineProject,
+  pointId: string,
+  input: { label?: string; memo?: string },
+): OfflineProject {
+  requireProject(project);
+  const next = cloneProject(project);
+  const point = next.points.find((candidate) => candidate.id === pointId);
+  if (!point) throw new Error('관심 지점을 찾지 못했습니다.');
+  if (input.label !== undefined) {
+    const label = input.label.trim();
+    if (!label) throw new Error('관심 지점 이름을 입력하세요.');
+    point.label = label;
+  }
+  if (input.memo !== undefined) point.memo = input.memo;
+  next.updatedAt = now();
+  requireProject(next);
+  requireProjectSize(next);
+  return next;
+}
+
+export function removeInterestPoint(project: OfflineProject, pointId: string): OfflineProject {
+  requireProject(project);
+  const next = cloneProject(project);
+  const before = next.points.length;
+  next.points = next.points.filter((point) => point.id !== pointId);
+  if (next.points.length === before) throw new Error('관심 지점을 찾지 못했습니다.');
+  next.updatedAt = now();
+  requireProject(next);
   return next;
 }
 

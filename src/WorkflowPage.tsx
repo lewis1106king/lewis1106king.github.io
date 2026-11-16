@@ -120,7 +120,7 @@ function downloadText(content: string, filename: string, type: string) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 function StatusPill({ status, type }: { status: TaskStatus | ObservationStatus; type: 'task' | 'review' }) {
@@ -345,7 +345,7 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
   const exportJson = () => {
     try {
       downloadText(JSON.stringify(workflow, null, 2), `S-수색관제-전체상태-rev${workflow.revision}.json`, 'application/json;charset=utf-8');
-      setSaveStatus({ tone: 'success', message: '전체 workflow state JSON을 내보냈습니다. 실제 서버·파일 보관은 하지 않습니다.' });
+      setSaveStatus({ tone: 'success', message: '이 시연의 작업·이력 JSON을 내보냈습니다. 사진과 도면이 들어 있는 전체 백업은 상황판에서 내려받으세요. 서버에는 보관하지 않습니다.' });
     } catch {
       setSaveStatus({ tone: 'error', message: 'JSON 내보내기를 만들지 못했습니다. 브라우저 다운로드 설정을 확인하세요.' });
     }
@@ -414,15 +414,16 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
           <button className="workflowBack" type="button" onClick={onBack}><ArrowLeft size={16} /> 소개</button>
           <span className="workflowMark" aria-hidden="true">S<span>?</span></span>
           <div>
-            <p>TEAM S? · VIRTUAL WORKFLOW</p>
-            <h1>다중 드론 수색 관제</h1>
+            <p>팀 S? · 승인 인계 시연</p>
+            <h1>수색 연결</h1>
           </div>
         </div>
         <div className="workflowHeaderActions">
-          <span className="workflowSimulation"><ShieldAlert size={15} /> 시뮬레이션</span>
+          <span className="workflowSimulation"><ShieldAlert size={15} /> 가상 시연</span>
+          <button type="button" className="button subtle small" onClick={() => { window.location.hash = 'practice'; }}>상황판</button>
           <button type="button" className="button subtle small" onClick={() => setGuideOpen((value) => !value)} aria-expanded={guideOpen}><Info size={15} /> 안내</button>
-          <button type="button" className="button subtle small" onClick={exportJson}><Download size={15} /> 전체 JSON</button>
-          <button type="button" className="button subtle small" onClick={exportHistory}><History size={15} /> CSV 이력</button>
+          <button type="button" className="button subtle small" onClick={exportJson}><Download size={15} /> 작업 기록</button>
+          <button type="button" className="button subtle small" onClick={exportHistory}><History size={15} /> 이력 CSV</button>
           <button type="button" className="button subtle small" onClick={resetFixture}><RefreshCcw size={15} /> 초기화</button>
           <button type="button" className="button critical small" onClick={triggerBInterruption} disabled={isBlocked || workflow.bInterrupted}><TriangleAlert size={15} /> B 중단 시연</button>
         </div>
@@ -431,7 +432,7 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
       <main className="workflowMain">
         {guideOpen && (
           <section className="workflowGuide" aria-label="시연 안내">
-            <div><p className="workflowEyebrow">PRESENTER GUIDE</p><h2>시연 순서</h2></div>
+            <div><p className="workflowEyebrow">시연 안내</p><h2>시연 순서</h2></div>
             <ol>
               <li><b>1. B 중단</b><span>Z-07·Z-08의 미완료 작업만 중단됩니다. 완료된 05·06은 보존됩니다.</span></li>
               <li><b>2. 원본 확인</b><span>중단 사유, 원본 작업 ID, 자료와 관측 검토 사유를 각각 확인합니다.</span></li>
@@ -480,7 +481,7 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
 
         <section className="workflowWorkspace" data-tab={narrowTab}>
           <aside className="workflowPanel workflowTasks" aria-label="작업 목록과 필터">
-            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">TASK FILTER</p><h3>작업 목록</h3></div><ListFilter size={18} /></div>
+            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">작업 필터</p><h3>작업 목록</h3></div><ListFilter size={18} /></div>
             <label className="workflowSearch"><Search size={15} /><span className="srOnly">작업 검색</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="구역·상태·기체 검색" /></label>
             <div className="workflowFilters" aria-label="작업 필터">
               {([
@@ -508,7 +509,7 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
           </aside>
 
           <section className="workflowPanel workflowGridPanel" aria-label="가상 수색 구역 그리드">
-            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">VIRTUAL SEARCH GRID</p><h3>가상 구역도</h3></div><MapPinned size={18} /></div>
+            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">가상 구역</p><h3>가상 구역도</h3></div><MapPinned size={18} /></div>
             <p className="workflowGridNote"><Info size={15} /> 작업 상태와 관측 검토 상태는 독립적으로 유지됩니다. 실제 지도나 비행 데이터는 아닙니다.</p>
             <div className="workflowGrid">
               {zones.map((zone) => {
@@ -526,7 +527,7 @@ export default function WorkflowPage({ onBack }: { onBack: () => void }) {
           </section>
 
           <aside className="workflowPanel workflowDetail" aria-label="선택 구역 상세" key={selectedId}>
-            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">SELECTED ZONE</p><h3>{selectedZone.id} 상세</h3></div><ClipboardCheck size={18} /></div>
+            <div className="workflowPanelHeading"><div><p className="workflowEyebrow">선택 구역</p><h3>{selectedZone.id} 상세</h3></div><ClipboardCheck size={18} /></div>
             <section className="workflowSelectionSummary">
               <span>{String(selectedZone.number).padStart(2, '0')}</span>
               <div><small>현재 담당</small><b>{formatTaskAssignee(currentTask)}</b><p>{dynamicNote}</p></div>

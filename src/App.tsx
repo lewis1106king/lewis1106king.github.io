@@ -4,6 +4,7 @@ import IntroPage from './IntroPage';
 import OfflineBoardPage from './offline/OfflineBoardPage';
 import WorkflowPage from './WorkflowPage';
 import { createWorkflow, projectZones } from './workflow';
+import type { BoardMode } from './offline/storage';
 
 export default function App() {
   const [route, setRoute] = useState(window.location.hash);
@@ -18,8 +19,21 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleRoute);
   }, []);
 
-  if (route === '#gcs') return <GcsPage onBack={() => { window.location.hash = ''; }} />;
-  if (route === '#demo') return <WorkflowPage onBack={() => { window.location.hash = ''; }} />;
-  if (route === '#field') return <OfflineBoardPage onBack={() => { window.location.hash = ''; }} />;
-  return <IntroPage zones={previewZones} onOpenDemo={() => { window.location.hash = 'demo'; }} onOpenGcs={() => { window.location.hash = 'gcs'; }} onOpenField={() => { window.location.hash = 'field'; }} />;
+  const open = (hash: string) => { window.location.hash = hash; };
+
+  if (route === '#gcs') return <GcsPage onBack={() => open('')} />;
+  if (route === '#demo') return <WorkflowPage onBack={() => open('')} />;
+  if (route === '#field' || route === '#practice') {
+    const mode: BoardMode = route === '#field' ? 'field' : 'practice';
+    return <OfflineBoardPage mode={mode} onBack={() => open('')} onMode={(next) => open(next)} />;
+  }
+  return (
+    <IntroPage
+      zones={previewZones}
+      onOpenPractice={() => open('practice')}
+      onOpenField={() => open('field')}
+      onOpenDemo={() => open('demo')}
+      onOpenGcs={() => open('gcs')}
+    />
+  );
 }

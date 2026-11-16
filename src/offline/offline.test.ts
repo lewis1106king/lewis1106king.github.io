@@ -3,8 +3,14 @@ import {
   MAX_PROJECT_BYTES,
   addEvidence,
   addInterestPoint,
+  addPhotoEvidence,
+  approveHandover,
+  cancelInterruption,
+  createEmptyProject,
   createOfflineProject,
+  interruptZone,
   parseOfflineProject,
+  removeEvidence,
   serializeOfflineProject,
   updateZone,
   validateOfflineProject,
@@ -118,5 +124,91 @@ ok(html.includes('&lt;현장 &amp; 보고&gt;'), '프로젝트 제목 HTML 이�
 ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'), '자료 이름 HTML 이스케이프');
 ok(!html.includes('<img src=x onerror=alert(1)>'), '사용자 HTML 미삽입');
 ok(html.includes('수색 종료·안전·인명 부재를 판정하지 않습니다.'), '보고서 한계 명시');
+
+// 예전 백업에 사진·인계 필드가 없어도 기본값으로 복원한다.
+const legacy = JSON.parse(serializeOfflineProject(initial)) as {
+  zones: Array<{ interruption?: unknown; handovers?: unknown; evidence: Array<{ photo?: unknown }> }>;
+};
+for (const zone of legacy.zones) {
+  delete zone.interruption;
+  delete zone.handovers;
+  for (const evidence of zone.evidence) delete evidence.photo;
+}
+const legacyLoad = parseOfflineProject(JSON.stringify(legacy));
+ok(legacyLoad.ok, '구버전 JSON 복원');
+equal(legacyLoad.project.zones[0]?.handovers.length, 0, '구버전 인계 기본값');
+equal(legacyLoad.project.zones[0]?.evidence[0]?.photo, null, '구버전 사진 기본값');
+
+// 빈 현장 기록은 12개 구역 모두 담당과 자료가 없다.
+const empty = createEmptyProject();
+ok(validateOfflineProject(empty), '빈 현장 기록 유효');
+ok(empty.zones.every((zone) => zone.droneId === null && zone.taskStatus === 'unassigned' && zone.evidence.length === 0), '빈 현장 기록 초기값');
+
+// 사진 첨부는 백업 JSON을 내렸다가 불러와도 같은 Data URL로 남는다.
+const photo = {
+  name: '가장자리.png',
+  mime: 'image/png' as const,
+  dataUrl: `data:image/png;base64,${minimalPngPayload}`,
+  bytes: 68,
+};
+const withPhoto = addPhotoEvidence(initial, 'Z-11', { label: '<사진>', memo: '수풀', photo });
+equal(initial.zones.find((zone) => zone.id === 'Z-11')?.evidence.length, 0, '사진 추가 원본 불변');
+const photoRoundTrip = parseOfflineProject(serializeOfflineProject(withPhoto));
+ok(photoRoundTrip.ok, '사진 포함 JSON 복원');
+const restoredPhoto = photoRoundTrip.project.zones.find((zone) => zone.id === 'Z-11')?.evidence[0]?.photo;
+equal(restoredPhoto?.dataUrl, photo.dataUrl, '사진 Data URL 왕복');
+equal(restoredPhoto?.bytes, 68, '사진 바이트 왕복');
+const removed = removeEvidence(withPhoto, 'Z-11', withPhoto.zones.find((zone) => zone.id === 'Z-11')!.evidence[0]!.id);
+equal(removed.zones.find((zone) => zone.id === 'Z-11')?.evidence.length, 0, '사진 자료 삭제');
+
+const badPhoto = { ...photo, bytes: 67 };
+let rejectedPhoto = false;
+try {
+  addPhotoEvidence(initial, 'Z-11', { label: '잘못된 사진', memo: '', photo: badPhoto });
+} catch (error) {
+  rejectedPhoto = error instanceof Error && error.message.includes('사진');
+}
+ok(rejectedPhoto, '사진 바이트 불일치 거부');
+
+// 승인 인계는 원자료와 관측 상태를 유지하고, 같은 중단을 두 번 승인하지 않는다.
+let handed = interruptZone(initial, 'Z-07', '통신 두절');
+const zoneBefore = handed.zones.find((zone) => zone.id === 'Z-07');
+equal(zoneBefore?.taskStatus, 'interrupted', '중단 상태');
+equal(zoneBefore?.observationStatus, 'unverified', '중단은 관측 상태를 바꾸지 않음');
+equal(zoneBefore?.interruption?.fromDrone, 'B', '이전 담당');
+equal(zoneBefore?.interruption?.previousStatus, 'in_progress', '중단 직전 작업');
+const evidenceBefore = JSON.stringify(zoneBefore?.evidence);
+handed = approveHandover(handed, 'Z-07', { toDrone: 'A', approvalReason: '인접 구역을 이어서 확인', approvedBy: '김정우' });
+const zoneAfter = handed.zones.find((zone) => zone.id === 'Z-07');
+equal(zoneAfter?.taskStatus, 'assigned', '승인 후 새 작업은 배정됨');
+equal(zoneAfter?.droneId, 'A', '승인 후 새 담당');
+equal(zoneAfter?.interruption, null, '승인 후 대기 해제');
+equal(zoneAfter?.handovers.length, 1, '승인 이력 1건');
+equal(zoneAfter?.handovers[0]?.fromDrone, 'B', '인계 이전 기체');
+equal(zoneAfter?.handovers[0]?.approvalReason, '인접 구역을 이어서 확인', '승인 사유 보존');
+equal(JSON.stringify(zoneAfter?.evidence), evidenceBefore, '인계 후 원자료 유지');
+const handoverRoundTrip = parseOfflineProject(serializeOfflineProject(handed));
+ok(handoverRoundTrip.ok, '인계 포함 JSON 복원');
+equal(handoverRoundTrip.project.zones.find((zone) => zone.id === 'Z-07')?.handovers[0]?.toDrone, 'A', '인계 담당 왕복');
+let duplicate = false;
+try {
+  approveHandover(handed, 'Z-07', { toDrone: 'C', approvalReason: '중복 승인', approvedBy: '운영자' });
+} catch {
+  duplicate = true;
+}
+ok(duplicate, '같은 중단의 중복 승인 거부');
+let completedBlocked = false;
+try {
+  interruptZone(initial, 'Z-05', '완료 구역 중단');
+} catch {
+  completedBlocked = true;
+}
+ok(completedBlocked, '완료 구역 중단 거부');
+const cancelled = cancelInterruption(interruptZone(initial, 'Z-02', '일시 중단'), 'Z-02');
+equal(cancelled.zones.find((zone) => zone.id === 'Z-02')?.taskStatus, 'in_progress', '중단 취소 시 이전 작업 복원');
+equal(cancelled.zones.find((zone) => zone.id === 'Z-02')?.droneId, 'A', '중단 취소 시 이전 담당 복원');
+const photoReport = reportHtml(createUnresolvedReport(withPhoto));
+ok(photoReport.includes('사진 가장자리.png'), '보고서에 사진 이름 표시');
+ok(photoReport.includes('&lt;사진&gt;'), '사진 자료명 이스케이프');
 
 console.log('offline tests passed');
