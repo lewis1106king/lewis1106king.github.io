@@ -1,0 +1,93 @@
+import type { DroneStatus, HandoverStatus, ObservationStatus, Role, TaskStatus } from '../domain/rules';
+
+export type Mission = {
+  id: string;
+  title: string;
+  joinCode: string;
+  createdBy: string;
+  createdAt: string;
+};
+
+export type Member = {
+  userId: string;
+  role: Role;
+  callsign: string;
+  droneName: string;
+  droneStatus: DroneStatus;
+  lat: number | null;
+  lng: number | null;
+  accuracy: number | null;
+  updatedAt: string;
+};
+
+export type Zone = {
+  id: string;
+  missionId: string;
+  label: string;
+  path: { lat: number; lng: number }[];
+  taskStatus: TaskStatus;
+  observationStatus: ObservationStatus;
+  reviewReason: string;
+  memo: string;
+  assigneeId: string | null;
+  updatedAt: string;
+};
+
+export type InterestPoint = {
+  id: string;
+  lat: number;
+  lng: number;
+  label: string;
+  memo: string;
+  createdBy: string;
+  createdAt: string;
+};
+
+export type Handover = {
+  id: string;
+  zoneId: string;
+  fromUser: string;
+  toUser: string | null;
+  previousStatus: TaskStatus;
+  interruptionReason: string;
+  approvalReason: string | null;
+  status: HandoverStatus;
+  requestedAt: string;
+  decidedAt: string | null;
+};
+
+export type Photo = {
+  id: string;
+  zoneId: string;
+  storagePath: string;
+  memo: string;
+  uploadedBy: string;
+  createdAt: string;
+  url: string | null;
+};
+
+export type Activity = {
+  id: string;
+  kind: string;
+  message: string;
+  actorId: string | null;
+  createdAt: string;
+};
+
+export type Notice = {
+  id: string;
+  message: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type MissionData = {
+  mission: Mission;
+  members: Member[];
+  zones: Zone[];
+  points: InterestPoint[];
+  handovers: Handover[];
+  photos: Photo[];
+  events: Activity[];
+  notices: Notice[];
+};

@@ -1,4 +1,4 @@
-const CACHE = 'suseak-yeolgyeol-v2';
+const CACHE = 'suseak-live-v3';
 const SHELL = ['/', '/index.html', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

@@ -11,7 +11,9 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "@vitejs/plugin-react": "latest",
+    "leaflet": "^1.9.4",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
+    "@types/leaflet": "^1.9.22",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "tailwindcss": "4.3.3",

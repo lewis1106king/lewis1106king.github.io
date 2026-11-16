@@ -1,9 +1,7 @@
 {
   "routes": [
-    { "path": "/", "title": "수색 연결 소개" },
-    { "path": "/#practice", "title": "수색 연결 연습 모드" },
-    { "path": "/#field", "title": "수색 연결 현장 모드" },
-    { "path": "/#demo", "title": "수색 연결 승인 인계 시연" },
-    { "path": "/#gcs", "title": "수색 연결 가상 GCS 화면" }
+    { "path": "/", "title": "수색 연결" },
+    { "path": "/#/auth", "title": "수색 연결 로그인" },
+    { "path": "/#/missions", "title": "수색 연결 임무" }
   ]
 }
