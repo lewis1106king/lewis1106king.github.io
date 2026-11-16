@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 import MapCanvas from '../mission/MapCanvas';
 import Press from '../components/Press';
 
-const fade = {
-  hidden: { opacity: 0, y: 28 },
+const rise = {
+  hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0 },
 };
 
@@ -15,10 +15,10 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
       </header>
       <main>
         <section className="hero">
-          <motion.div initial="hidden" animate="show" variants={fade} transition={{ type: 'spring', stiffness: 70, damping: 16 }}>
+          <motion.div initial="hidden" animate="show" variants={rise} transition={{ type: 'spring', stiffness: 80, damping: 18 }}>
             <p className="eyebrow">팀 S?</p>
             <h1>한 번 누르면<br />수색이 시작됩니다.</h1>
-            <p className="sub">코드만 보내면 같은 지도에 모입니다.</p>
+            <p className="sub">같은 지도에 모입니다.</p>
             <div className="desktop-cta">
               <Press onClick={onStart}>새 수색 시작</Press>
               <button className="text-link" type="button" onClick={onJoin}>코드가 있어요</button>
@@ -26,9 +26,9 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           </motion.div>
           <motion.div
             className="hero-map"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 60, damping: 18, delay: 0.08 }}
+            initial={{ opacity: 0, scale: 0.97, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 70, damping: 18, delay: 0.06 }}
           >
             <MapCanvas zones={[]} points={[]} members={[]} showLocate />
           </motion.div>
@@ -37,15 +37,15 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           className="quiet-block"
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.5 }}
-          variants={fade}
-          transition={{ type: 'spring', stiffness: 70, damping: 18 }}
+          viewport={{ once: true, amount: 0.6 }}
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
-          <h2>그리고 이어서 적습니다.</h2>
           <div className="trio">
-            <article><b>완료</b><span>구역을 누르면 한 번.</span></article>
-            <article><b>중단</b><span>이유만 적습니다.</span></article>
-            <article><b>사진</b><span>그 구역에 남습니다.</span></article>
+            {['완료', '중단', '사진'].map((word) => (
+              <motion.article key={word} variants={rise} transition={{ type: 'spring', stiffness: 90, damping: 18 }}>
+                <b>{word}</b>
+              </motion.article>
+            ))}
           </div>
         </motion.section>
       </main>

@@ -1,7 +1,7 @@
 {
   "routes": [
     { "path": "/", "title": "수색 연결" },
-    { "path": "/#/auth", "title": "수색 연결 로그인" },
-    { "path": "/#/missions", "title": "수색 연결 임무" }
+    { "path": "/#/join", "title": "수색 연결 코드" },
+    { "path": "/#/start", "title": "수색 연결 시작" }
   ]
 }

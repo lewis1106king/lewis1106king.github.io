@@ -63,6 +63,7 @@ export type Photo = {
   memo: string;
   uploadedBy: string;
   createdAt: string;
+  ready: boolean;
   url: string | null;
 };
 

@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { canRequestHandover, isValidPath, movedMeters, type LatLng } from '../domain/rules';
+import { canRequestHandover, isValidPath, movedMeters, taskLabel, type LatLng } from '../domain/rules';
 import { reportHtml } from '../domain/report';
 import Press from '../components/Press';
 import MapCanvas from '../mission/MapCanvas';
 import { useMission } from '../mission/useMission';
 
-export default function MissionScreen({ missionId, selfId, onBack }: { missionId: string; selfId: string; onBack: () => void }) {
-  const mission = useMission(missionId, selfId);
+export default function MissionScreen({ code, selfId, onBack }: { code: string; selfId: string; onBack: () => void }) {
+  const mission = useMission(code, selfId);
   const data = mission.data;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<LatLng[]>([]);
   const [drawing, setDrawing] = useState(false);
-  const [mode, setMode] = useState<'actions' | 'stop' | 'more'>('actions');
+  const [stopping, setStopping] = useState(false);
   const [reason, setReason] = useState('');
   const self = mission.self;
 
@@ -29,7 +29,7 @@ export default function MissionScreen({ missionId, selfId, onBack }: { missionId
       void mission.sharePresence({ ...point, accuracy: position.coords.accuracy }, self.droneStatus);
     }, () => undefined, { enableHighAccuracy: true, maximumAge: 4000 });
     return () => navigator.geolocation.clearWatch(watch);
-  }, [self?.userId, self?.droneStatus]);
+  }, [self?.userId, self?.droneStatus, mission.sharePresence]);
 
   if (!data) {
     return (
@@ -37,22 +37,19 @@ export default function MissionScreen({ missionId, selfId, onBack }: { missionId
         <div className="skeleton title" />
         <div className="skeleton card" />
         <p className="sub">{mission.error || '지도를 준비하고 있어요.'}</p>
+        {mission.error ? <Press onClick={onBack}>홈으로</Press> : null}
       </main>
     );
   }
 
-  const zone = data.zones.find((item) => item.id === selectedId) ?? null;
+  const zone = data.zones.find((item) => item.id === selectedId) ?? (data.zones.length === 1 ? data.zones[0] : null);
   const pending = data.handovers.find((item) => item.zoneId === zone?.id && item.status === 'pending') ?? null;
   const operator = self?.role === 'operator';
-  const photos = data.photos.filter((photo) => photo.zoneId === zone?.id);
+  const photos = data.photos.filter((photo) => photo.zoneId === zone?.id && photo.url);
 
-  const pick = (point: LatLng) => {
-    if (drawing) setDraft((value) => value.length >= 24 ? value : [...value, point]);
-  };
-
-  const saveZone = async () => {
+  const saveZone = () => {
     if (!isValidPath(draft)) return;
-    await mission.createZone(`구역 ${data.zones.length + 1}`, draft);
+    mission.createZone(`구역 ${data.zones.length + 1}`, draft);
     setDraft([]);
     setDrawing(false);
   };
@@ -82,27 +79,34 @@ export default function MissionScreen({ missionId, selfId, onBack }: { missionId
   };
 
   return (
-    <div className="board">
+    <div
+      className="board"
+      data-live={mission.live ? '1' : '0'}
+      data-zones={data.zones.length}
+      data-members={data.members.length}
+      data-status={zone?.taskStatus ?? ''}
+      data-photos={photos.length}
+    >
       <header className="float-bar">
         <button className="text-link" type="button" onClick={onBack}>코드</button>
         <b>{data.mission.joinCode}</b>
-        <span className={mission.live ? 'dot on' : 'dot'} aria-label={mission.live ? '실시간 연결' : '연결 확인 중'} />
+        <span className={mission.live ? 'dot on' : 'dot'} aria-label={mission.live ? '연결됨' : '연결 중'} />
       </header>
       <MapCanvas
         zones={data.zones}
         points={data.points}
         members={data.members}
         selfId={selfId}
-        selectedZoneId={selectedId}
+        selectedZoneId={zone?.id ?? null}
         draft={draft}
         showLocate
         active
-        onPick={drawing ? pick : undefined}
-        onSelectZone={(id) => { setSelectedId(id); setMode('actions'); setDrawing(false); }}
+        onPick={drawing ? (point) => setDraft((value) => value.length >= 24 ? value : [...value, point]) : undefined}
+        onSelectZone={(id) => { setSelectedId(id); setStopping(false); setDrawing(false); }}
       />
       <motion.section
         className="sheet"
-        initial={{ y: 28, opacity: 0 }}
+        initial={{ y: 36, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 280, damping: 30 }}
       >
@@ -110,43 +114,44 @@ export default function MissionScreen({ missionId, selfId, onBack }: { missionId
         {mission.error ? <p className="error" role="alert">{mission.error}</p> : null}
         {drawing ? (
           <>
-            <h2>지도를 눌러<br />구역을 그리세요.</h2>
-            <p className="sub">{draft.length}개 점</p>
+            <h2>지도를 누르세요.</h2>
+            <p className="sub">{draft.length}점</p>
             <div className="pair">
               <button className="press press-quiet" type="button" onClick={() => setDraft((value) => value.slice(0, -1))}>취소</button>
-              <Press disabled={!isValidPath(draft)} onClick={() => void saveZone()}>저장</Press>
+              <Press disabled={!isValidPath(draft)} onClick={saveZone}>저장</Press>
             </div>
           </>
         ) : zone && pending && operator ? (
           <>
-            <h2>{zone.label}<br />이어받을까요?</h2>
+            <h2>{zone.label}</h2>
             <p className="sub">{pending.interruptionReason}</p>
-            <Press onClick={() => void mission.decideHandover(pending.id, true, '이어서 확인', pending.toUser ?? selfId)}>승인</Press>
+            <Press onClick={() => mission.decideHandover(pending.id)}>승인</Press>
           </>
-        ) : zone && mode === 'stop' ? (
+        ) : zone && stopping ? (
           <>
             <h2>왜 멈추나요?</h2>
             <textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="통신이 끊겼어요" aria-label="중단 이유" />
-            <Press disabled={reason.trim().length < 2} onClick={() => { void mission.requestHandover(zone.id, reason, null); setMode('actions'); setReason(''); }}>보내기</Press>
+            <Press disabled={reason.trim().length < 2} onClick={() => { mission.requestHandover(zone.id, reason); setStopping(false); setReason(''); }}>보내기</Press>
           </>
         ) : zone ? (
           <>
             <h2>{zone.label}</h2>
+            <p className="sub">{taskLabel[zone.taskStatus]}</p>
             <div className="pair">
-              <Press onClick={() => void mission.updateZone(zone, { taskStatus: 'completed' })}>완료</Press>
+              {zone.taskStatus === 'completed' ? <p className="done">완료</p> : <Press onClick={() => mission.completeZone(zone.id)}>완료</Press>}
               <label className="press press-quiet file">
                 사진
                 <input type="file" accept="image/*" onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = '';
-                  if (file) void mission.uploadPhoto(zone.id, file, '');
+                  if (file) void mission.uploadPhoto(zone.id, file);
                 }} />
               </label>
             </div>
             {photos[0]?.url ? <img className="shot" src={photos[0].url} alt="" /> : null}
             {canRequestHandover({
               id: zone.id, label: zone.label, taskStatus: zone.taskStatus, observationStatus: zone.observationStatus, assigneeId: zone.assigneeId, photoCount: photos.length,
-            }, Boolean(pending)) ? <button className="text-link" type="button" onClick={() => setMode('stop')}>중단 보고</button> : null}
+            }, Boolean(pending)) ? <button className="text-link" type="button" onClick={() => setStopping(true)}>중단 보고</button> : null}
             {pending ? <p className="sub">승인을 기다리고 있어요.</p> : null}
           </>
         ) : (

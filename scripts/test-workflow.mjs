@@ -9,6 +9,7 @@ const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 execFileSync(pnpm, [
   'exec', 'tsc', '--ignoreConfig',
   'src/domain/rules.ts', 'src/domain/rules.test.ts', 'src/domain/report.ts',
+  'src/mission/types.ts', 'src/sync/merge.ts', 'src/sync/edit.ts', 'src/sync/merge.test.ts',
   '--rootDir', 'src', '--outDir', output, '--module', 'esnext', '--moduleResolution', 'bundler',
   '--target', 'ES2022', '--skipLibCheck', '--strict',
 ], { cwd: resolve('.'), stdio: 'inherit', shell: process.platform === 'win32' });
