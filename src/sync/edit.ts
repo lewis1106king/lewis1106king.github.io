@@ -1,4 +1,4 @@
-import { approvalResult, type DroneStatus, type LatLng, type Role } from '../domain/rules';
+import type { DroneStatus, LatLng, Role } from '../domain/rules';
 import type { MissionData, Zone } from '../mission/types';
 function now(): string {
   return new Date().toISOString();
@@ -24,6 +24,7 @@ export function freshMission(selfId: string, name: string): MissionData {
       callsign: name.trim() || '나',
       droneName: '',
       droneStatus: 'ground',
+      battery: null,
       lat: null,
       lng: null,
       accuracy: null,
@@ -57,6 +58,7 @@ export function ensureMember(data: MissionData, selfId: string, name: string, ro
       callsign,
       droneName: '',
       droneStatus: 'ground',
+      battery: null,
       lat: null,
       lng: null,
       accuracy: null,
@@ -114,59 +116,15 @@ export function addPhoto(data: MissionData, zoneId: string, selfId: string, url:
   };
 }
 
-export function requestStop(data: MissionData, zoneId: string, selfId: string, reason: string): MissionData {
-  const zone = data.zones.find((item) => item.id === zoneId);
-  if (!zone || zone.taskStatus === 'completed') return data;
-  if (data.handovers.some((item) => item.zoneId === zoneId && item.status === 'pending')) return data;
-  const stamp = now();
-  return {
-    ...data,
-    zones: data.zones.map((item) => item.id === zoneId ? { ...item, taskStatus: 'interrupted' as const, updatedAt: stamp } : item),
-    handovers: [...data.handovers, {
-      id: crypto.randomUUID(),
-      zoneId,
-      fromUser: selfId,
-      toUser: null,
-      previousStatus: zone.taskStatus,
-      interruptionReason: reason.trim(),
-      approvalReason: null,
-      status: 'pending',
-      requestedAt: stamp,
-      decidedAt: null,
-    }],
-  };
-}
-
-export function approveStop(data: MissionData, handoverId: string, selfId: string): MissionData {
-  const handover = data.handovers.find((item) => item.id === handoverId && item.status === 'pending');
-  if (!handover) return data;
-  const stamp = now();
-  const toUser = handover.toUser ?? selfId;
-  const result = approvalResult({ approve: true, previousStatus: handover.previousStatus, toUserId: toUser });
-  return {
-    ...data,
-    zones: data.zones.map((zone) => zone.id === handover.zoneId ? {
-      ...zone,
-      taskStatus: result.taskStatus,
-      assigneeId: result.assigneeId ?? zone.assigneeId,
-      updatedAt: stamp,
-    } : zone),
-    handovers: data.handovers.map((item) => item.id === handoverId ? {
-      ...item,
-      status: 'approved' as const,
-      toUser,
-      approvalReason: '이어서 확인',
-      decidedAt: stamp,
-    } : item),
-  };
-}
-
 export function moveMember(
   data: MissionData,
   selfId: string,
   position: { lat: number; lng: number; accuracy: number | null },
   droneStatus: DroneStatus,
 ): MissionData {
+  const current = data.members.find((member) => member.userId === selfId);
+  if (!current || current.droneStatus === 'lost') return data;
+  if (current.battery !== null && current.battery <= 15) return data;
   const stamp = now();
   return {
     ...data,
@@ -176,6 +134,28 @@ export function moveMember(
       lng: round(position.lng),
       accuracy: position.accuracy,
       droneStatus,
+      updatedAt: stamp,
+    } : member),
+  };
+}
+
+export function beat(
+  data: MissionData,
+  selfId: string,
+  position: { lat: number; lng: number; accuracy: number | null } | null,
+): MissionData {
+  const current = data.members.find((member) => member.userId === selfId);
+  if (!current || current.droneStatus === 'lost') return data;
+  if (current.battery !== null && current.battery <= 15) return data;
+  const stamp = now();
+  return {
+    ...data,
+    members: data.members.map((member) => member.userId === selfId ? {
+      ...member,
+      lat: position ? round(position.lat) : member.lat,
+      lng: position ? round(position.lng) : member.lng,
+      accuracy: position ? position.accuracy : member.accuracy,
+      droneStatus: position ? 'flying' : 'ready',
       updatedAt: stamp,
     } : member),
   };

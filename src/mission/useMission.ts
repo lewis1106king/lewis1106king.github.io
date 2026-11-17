@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DroneStatus, LatLng } from '../domain/rules';
 import { blobToDataUrl, compressImage } from '../lib/imageFile';
-import { addPhoto, addZone, approveStop, completeZone, moveMember, requestStop } from '../sync/edit';
+import { addPhoto, addZone, beat, completeZone, moveMember } from '../sync/edit';
+import { autoAssign, dropDrone, undoHandover } from '../sync/handover';
 import { openRoom } from '../sync/room';
 import type { MissionData } from './types';
 
@@ -31,6 +32,11 @@ export function useMission(code: string, selfId: string) {
     openRoom(code).update(update);
   }, [code]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => change((current) => autoAssign(current, Date.now())), 3000);
+    return () => window.clearInterval(timer);
+  }, [change]);
+
   const sharePresence = useCallback(async (
     position: { lat: number; lng: number; accuracy: number | null },
     droneStatus: DroneStatus,
@@ -47,8 +53,10 @@ export function useMission(code: string, selfId: string) {
     self,
     createZone: (label: string, path: LatLng[]) => change((current) => addZone(current, selfId, label, path)),
     completeZone: (zoneId: string) => change((current) => completeZone(current, zoneId)),
-    requestHandover: (zoneId: string, reason: string) => change((current) => requestStop(current, zoneId, selfId, reason)),
-    decideHandover: (handoverId: string) => change((current) => approveStop(current, handoverId, selfId)),
+    beat: (position: { lat: number; lng: number; accuracy: number | null } | null) => change((current) => beat(current, selfId, position)),
+    dropLink: () => change((current) => dropDrone(current, selfId, 'lost')),
+    drainBattery: () => change((current) => dropDrone(current, selfId, 'battery')),
+    undoHandover: (handoverId: string) => change((current) => undoHandover(current, handoverId)),
     uploadPhoto: async (zoneId: string, file: File) => {
       try {
         let blob = await compressImage(file, 720, 0.62);

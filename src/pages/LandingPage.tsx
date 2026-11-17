@@ -18,7 +18,7 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           <motion.div initial="hidden" animate="show" variants={rise} transition={{ type: 'spring', stiffness: 80, damping: 18 }}>
             <p className="eyebrow">팀 S?</p>
             <h1>한 번 누르면<br />수색이 시작됩니다.</h1>
-            <p className="sub">같은 지도에 모입니다.</p>
+            <p className="sub">끊기면 가장 가까운 드론이 이어받습니다.</p>
             <div className="desktop-cta">
               <Press onClick={onStart}>새 수색 시작</Press>
               <button className="text-link" type="button" onClick={onJoin}>코드가 있어요</button>
@@ -41,7 +41,7 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
           <div className="trio">
-            {['완료', '중단', '사진'].map((word) => (
+            {['완료', '자동 인계', '사진'].map((word) => (
               <motion.article key={word} variants={rise} transition={{ type: 'spring', stiffness: 90, damping: 18 }}>
                 <b>{word}</b>
               </motion.article>

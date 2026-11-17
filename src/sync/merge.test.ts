@@ -1,5 +1,5 @@
 import type { MissionData } from '../mission/types';
-import { addZone, approveStop, completeZone, ensureMember, requestStop } from './edit';
+import { addZone, completeZone, ensureMember } from './edit';
 import { canonical, fromWire, mergeMission, toWire } from './merge';
 
 function equal(actual: unknown, expected: unknown, message: string): void {
@@ -12,7 +12,7 @@ function mission(code: string): MissionData {
   return {
     mission: { id: code, title: '새 수색', joinCode: code, createdBy: 'a', createdAt: '2026-11-17T00:00:00.000Z' },
     members: [{
-      userId: 'a', role: 'operator', callsign: '나', droneName: '', droneStatus: 'ground',
+      userId: 'a', role: 'operator', callsign: '나', droneName: '', droneStatus: 'ground', battery: null,
       lat: null, lng: null, accuracy: null, updatedAt: '2026-11-17T00:00:00.000Z',
     }],
     zones: [], points: [], handovers: [], photos: [], events: [], notices: [],
@@ -41,10 +41,6 @@ const remotePhoto = fromWire(toWire(withPhoto));
 if (!remotePhoto || remotePhoto.photos[0]?.url !== null || remotePhoto.photos[0]?.ready !== true) throw new Error('전송본은 사진 본문을 빼야 합니다.');
 const kept = mergeMission(withPhoto, remotePhoto);
 if (kept.photos[0]?.url !== 'data:image/jpeg;base64,abc') throw new Error('이미 가진 사진을 유지해야 합니다.');
-
-const stopped = requestStop(local, local.zones[0].id, 'b', '통신이 끊겼어요');
-const approved = approveStop(stopped, stopped.handovers[0].id, 'a');
-if (approved.handovers[0]?.status !== 'approved' || approved.zones[0]?.taskStatus !== 'assigned') throw new Error('승인 후 배정이어야 합니다.');
 
 const again = fromWire(toWire(merged));
 if (!again) throw new Error('전송 본문을 다시 읽어야 합니다.');

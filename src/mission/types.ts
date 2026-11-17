@@ -14,6 +14,7 @@ export type Member = {
   callsign: string;
   droneName: string;
   droneStatus: DroneStatus;
+  battery: number | null;
   lat: number | null;
   lng: number | null;
   accuracy: number | null;

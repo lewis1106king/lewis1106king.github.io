@@ -211,6 +211,16 @@ h1, h2, p { margin: 0; }
   color: #028a4a;
   font-weight: 800;
 }
+.toast {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #eaf2ff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.links { display: flex; gap: 16px; }
 .grab { width: 40px; height: 4px; border-radius: 99px; background: #e5e8eb; justify-self: center; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .file { display: grid; place-items: center; position: relative; overflow: hidden; }
