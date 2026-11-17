@@ -18,6 +18,10 @@ export type Member = {
   lat: number | null;
   lng: number | null;
   accuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+  camera: boolean;
+  trail: { lat: number; lng: number }[];
   updatedAt: string;
 };
 
@@ -34,10 +38,13 @@ export type Zone = {
   updatedAt: string;
 };
 
+export type PointKind = 'person' | 'hazard' | 'entry';
+
 export type InterestPoint = {
   id: string;
   lat: number;
   lng: number;
+  kind: PointKind;
   label: string;
   memo: string;
   createdBy: string;

@@ -13,7 +13,8 @@ function mission(code: string): MissionData {
     mission: { id: code, title: '새 수색', joinCode: code, createdBy: 'a', createdAt: '2026-11-17T00:00:00.000Z' },
     members: [{
       userId: 'a', role: 'operator', callsign: '나', droneName: '', droneStatus: 'ground', battery: null,
-      lat: null, lng: null, accuracy: null, updatedAt: '2026-11-17T00:00:00.000Z',
+      lat: null, lng: null, accuracy: null, heading: null, speed: null, camera: false, trail: [],
+      updatedAt: '2026-11-17T00:00:00.000Z',
     }],
     zones: [], points: [], handovers: [], photos: [], events: [], notices: [],
   };

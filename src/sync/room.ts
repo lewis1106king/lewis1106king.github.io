@@ -34,6 +34,7 @@ export class LiveRoom {
   private readonly sentPhotos = new Set<string>();
   private readonly listeners = new Set<Listener>();
   private holding = true;
+  private readonly signalers = new Set<(text: string) => void>();
   private readonly ready: Promise<void>;
 
   constructor(readonly code: string) {
@@ -76,6 +77,15 @@ export class LiveRoom {
     if (!this.holding) this.push();
   }
 
+  onSignal(listener: (text: string) => void): () => void {
+    this.signalers.add(listener);
+    return () => this.signalers.delete(listener);
+  }
+
+  sendSignal(text: string): void {
+    this.mqtt.publish(this.signalTopic(), text, false);
+  }
+
   close(): void {
     this.closed = true;
     this.mqtt.stop();
@@ -88,6 +98,7 @@ export class LiveRoom {
     this.mqtt.onReady = () => {
       this.mqtt.subscribe(this.stateTopic());
       this.mqtt.subscribe(this.photoFilter());
+      this.mqtt.subscribe(this.signalTopic());
       this.refreshLive();
       if (!this.holding) this.push();
     };
@@ -112,8 +123,16 @@ export class LiveRoom {
     return `suseak/v1/${this.code}/p/${id}`;
   }
 
+  private signalTopic(): string {
+    return `suseak/v1/${this.code}/sig`;
+  }
+
   private onMqtt(topic: string, payload: Uint8Array): void {
     const text = decoder.decode(payload);
+    if (topic.endsWith('/sig')) {
+      this.signalers.forEach((listener) => listener(text));
+      return;
+    }
     if (topic.endsWith('/state')) this.applyText(text);
     else {
       const id = topic.split('/').at(-1) ?? '';

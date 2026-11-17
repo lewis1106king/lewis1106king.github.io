@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DroneStatus, LatLng } from '../domain/rules';
 import { blobToDataUrl, compressImage } from '../lib/imageFile';
-import { addPhoto, addZone, beat, completeZone, moveMember } from '../sync/edit';
+import { addMark, addPhoto, addZone, beat, completeZone, moveMember, moveVertex, setLevel, setSharing, type Fix } from '../sync/edit';
+import type { PointKind } from './types';
 import { autoAssign, dropDrone, undoHandover } from '../sync/handover';
 import { openRoom } from '../sync/room';
 import type { MissionData } from './types';
@@ -37,6 +38,14 @@ export function useMission(code: string, selfId: string) {
     return () => window.clearInterval(timer);
   }, [change]);
 
+  const beatPresence = useCallback((position: Fix | null) => {
+    change((current) => beat(current, selfId, position));
+  }, [change, selfId]);
+
+  const setBattery = useCallback((level: number) => {
+    change((current) => setLevel(current, selfId, level));
+  }, [change, selfId]);
+
   const sharePresence = useCallback(async (
     position: { lat: number; lng: number; accuracy: number | null },
     droneStatus: DroneStatus,
@@ -53,7 +62,11 @@ export function useMission(code: string, selfId: string) {
     self,
     createZone: (label: string, path: LatLng[]) => change((current) => addZone(current, selfId, label, path)),
     completeZone: (zoneId: string) => change((current) => completeZone(current, zoneId)),
-    beat: (position: { lat: number; lng: number; accuracy: number | null } | null) => change((current) => beat(current, selfId, position)),
+    beat: beatPresence,
+    setSharing: (camera: boolean) => change((current) => setSharing(current, selfId, camera)),
+    setBattery,
+    addMark: (kind: PointKind, point: LatLng, memo: string) => change((current) => addMark(current, selfId, kind, point, memo)),
+    moveVertex: (zoneId: string, index: number, point: LatLng) => change((current) => moveVertex(current, zoneId, index, point)),
     dropLink: () => change((current) => dropDrone(current, selfId, 'lost')),
     drainBattery: () => change((current) => dropDrone(current, selfId, 'battery')),
     undoHandover: (handoverId: string) => change((current) => undoHandover(current, handoverId)),

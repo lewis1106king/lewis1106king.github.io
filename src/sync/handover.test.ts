@@ -11,7 +11,7 @@ const now = Date.parse(freshAt);
 function member(id: string, callsign: string, lat: number, lng: number, at = freshAt) {
   return {
     userId: id, role: 'pilot' as const, callsign, droneName: '', droneStatus: 'flying' as const,
-    battery: null, lat, lng, accuracy: 10, updatedAt: at,
+    battery: null, lat, lng, accuracy: 10, heading: null, speed: null, camera: false, trail: [], updatedAt: at,
   };
 }
 

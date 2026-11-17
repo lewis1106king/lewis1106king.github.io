@@ -1,5 +1,6 @@
-import type { DroneStatus, LatLng, Role } from '../domain/rules';
-import type { MissionData, Zone } from '../mission/types';
+import { movedMeters, type DroneStatus, type LatLng, type Role } from '../domain/rules';
+import { bearing } from '../map/geo';
+import type { MissionData, PointKind, Zone } from '../mission/types';
 function now(): string {
   return new Date().toISOString();
 }
@@ -28,6 +29,10 @@ export function freshMission(selfId: string, name: string): MissionData {
       lat: null,
       lng: null,
       accuracy: null,
+      heading: null,
+      speed: null,
+      camera: false,
+      trail: [],
       updatedAt: stamp,
     }],
     zones: [],
@@ -62,6 +67,10 @@ export function ensureMember(data: MissionData, selfId: string, name: string, ro
       lat: null,
       lng: null,
       accuracy: null,
+      heading: null,
+      speed: null,
+      camera: false,
+      trail: [],
       updatedAt: stamp,
     }],
   };
@@ -139,24 +148,92 @@ export function moveMember(
   };
 }
 
-export function beat(
-  data: MissionData,
-  selfId: string,
-  position: { lat: number; lng: number; accuracy: number | null } | null,
-): MissionData {
+export type Fix = {
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+};
+
+export function beat(data: MissionData, selfId: string, position: Fix | null): MissionData {
   const current = data.members.find((member) => member.userId === selfId);
   if (!current || current.droneStatus === 'lost') return data;
   if (current.battery !== null && current.battery <= 15) return data;
   const stamp = now();
+  const lat = position ? round(position.lat) : current.lat;
+  const lng = position ? round(position.lng) : current.lng;
+  const previous = current.lat !== null && current.lng !== null ? { lat: current.lat, lng: current.lng } : null;
+  const nextPoint = lat !== null && lng !== null ? { lat, lng } : null;
+  const moved = previous && nextPoint ? movedMeters(previous, nextPoint) : 0;
+  const elapsed = Math.max(1, (Date.parse(stamp) - Date.parse(current.updatedAt)) / 1000);
+  const heading = position?.heading ?? (previous && nextPoint && moved > 3 ? Math.round(bearing(previous, nextPoint)) : current.heading);
+  const speed = position?.speed ?? (moved > 3 ? Math.round((moved / elapsed) * 10) / 10 : current.speed);
+  const trail = nextPoint && (!previous || moved > 4)
+    ? [...current.trail, nextPoint].slice(-30)
+    : current.trail;
   return {
     ...data,
     members: data.members.map((member) => member.userId === selfId ? {
       ...member,
-      lat: position ? round(position.lat) : member.lat,
-      lng: position ? round(position.lng) : member.lng,
+      lat,
+      lng,
       accuracy: position ? position.accuracy : member.accuracy,
+      heading,
+      speed,
+      trail,
       droneStatus: position ? 'flying' : 'ready',
       updatedAt: stamp,
     } : member),
+  };
+}
+
+export function setLevel(data: MissionData, selfId: string, level: number): MissionData {
+  const current = data.members.find((member) => member.userId === selfId);
+  if (!current || current.droneStatus === 'lost') return data;
+  if (current.battery !== null && current.battery <= 15) return data;
+  const battery = Math.max(0, Math.min(100, Math.round(level)));
+  if (current.battery === battery) return data;
+  return {
+    ...data,
+    members: data.members.map((member) => member.userId === selfId ? { ...member, battery, updatedAt: now() } : member),
+  };
+}
+
+export function setSharing(data: MissionData, selfId: string, camera: boolean): MissionData {
+  if (!data.members.some((member) => member.userId === selfId)) return data;
+  const stamp = now();
+  return {
+    ...data,
+    members: data.members.map((member) => member.userId === selfId ? { ...member, camera, updatedAt: stamp } : member),
+  };
+}
+
+export function addMark(data: MissionData, selfId: string, kind: PointKind, point: LatLng, memo: string): MissionData {
+  const names: Record<PointKind, string> = { person: '발견', hazard: '위험', entry: '입구' };
+  return {
+    ...data,
+    points: [...data.points, {
+      id: crypto.randomUUID(),
+      lat: round(point.lat),
+      lng: round(point.lng),
+      kind,
+      label: names[kind],
+      memo: memo.trim().slice(0, 80),
+      createdBy: selfId,
+      createdAt: now(),
+    }],
+  };
+}
+
+export function moveVertex(data: MissionData, zoneId: string, index: number, point: LatLng): MissionData {
+  const stamp = now();
+  return {
+    ...data,
+    zones: data.zones.map((zone) => zone.id === zoneId ? {
+      ...zone,
+      path: zone.path.map((item, itemIndex) => itemIndex === index ? { lat: round(point.lat), lng: round(point.lng) } : item),
+      updatedAt: stamp,
+    } : zone),
   };
 }

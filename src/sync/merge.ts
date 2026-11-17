@@ -63,6 +63,14 @@ export function fromWire(value: unknown): MissionData | null {
       lat: finite(member.lat),
       lng: finite(member.lng),
       accuracy: finite(member.accuracy),
+      heading: finite(member.heading),
+      speed: finite(member.speed),
+      camera: Boolean(member.camera),
+      trail: (Array.isArray(member.trail) ? member.trail : []).slice(-30).flatMap((point) => {
+        const lat = finite(point?.lat);
+        const lng = finite(point?.lng);
+        return lat === null || lng === null ? [] : [{ lat, lng }];
+      }),
       updatedAt: clip(member.updatedAt, 40),
     })).filter((member) => member.userId),
     zones: (Array.isArray(wire.zones) ? wire.zones : []).slice(0, 40).map((zone) => ({
@@ -81,7 +89,22 @@ export function fromWire(value: unknown): MissionData | null {
       assigneeId: zone.assigneeId ? clip(zone.assigneeId, 80) : null,
       updatedAt: clip(zone.updatedAt, 40),
     })).filter((zone) => zone.id),
-    points: (Array.isArray(wire.points) ? wire.points : []).slice(0, 40),
+    points: (Array.isArray(wire.points) ? wire.points : []).slice(0, 40).flatMap((point) => {
+      const lat = finite(point?.lat);
+      const lng = finite(point?.lng);
+      if (lat === null || lng === null || !point?.id) return [];
+      const kind = point.kind === 'hazard' || point.kind === 'entry' ? point.kind : 'person' as const;
+      return [{
+        id: clip(point.id, 80),
+        lat,
+        lng,
+        kind,
+        label: clip(point.label, 24) || '표시',
+        memo: clip(point.memo, 80),
+        createdBy: clip(point.createdBy, 80),
+        createdAt: clip(point.createdAt, 40),
+      }];
+    }),
     handovers: (Array.isArray(wire.handovers) ? wire.handovers : []).slice(0, 40).map((item) => ({
       ...item,
       interruptionReason: clip(item.interruptionReason, 140),

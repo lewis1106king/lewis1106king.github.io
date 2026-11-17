@@ -11,6 +11,7 @@ execFileSync(pnpm, [
   'src/domain/rules.ts', 'src/domain/rules.test.ts', 'src/domain/report.ts',
   'src/mission/types.ts', 'src/sync/merge.ts', 'src/sync/edit.ts', 'src/sync/merge.test.ts',
   'src/sync/handover.ts', 'src/sync/handover.test.ts',
+  'src/map/geo.ts', 'src/map/geo.test.ts',
   '--rootDir', 'src', '--outDir', output, '--module', 'esnext', '--moduleResolution', 'bundler',
   '--target', 'ES2022', '--skipLibCheck', '--strict',
 ], { cwd: resolve('.'), stdio: 'inherit', shell: process.platform === 'win32' });
@@ -32,3 +33,4 @@ rewriteImports(output);
 execFileSync(process.execPath, [join(output, 'domain', 'rules.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'sync', 'merge.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'sync', 'handover.test.js')], { stdio: 'inherit' });
+execFileSync(process.execPath, [join(output, 'map', 'geo.test.js')], { stdio: 'inherit' });
