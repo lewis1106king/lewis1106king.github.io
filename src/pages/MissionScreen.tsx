@@ -245,26 +245,6 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       data-route={activePoint(data, selfId)?.assigneeId ?? ''}
       data-progress={`${(data.waypoints ?? []).filter((point) => point.step === 'confirmed').length}/${(data.waypoints ?? []).length}`}
     >
-      <PovCard
-        drone={drone ?? self}
-        point={activePoint(data, selfId)}
-        progress={(data.waypoints ?? []).filter((item) => item.step === 'confirmed').length}
-        total={(data.waypoints ?? []).length}
-        auto={Boolean(data.mission.autoRun)}
-        link={link}
-        note={linkNote}
-        craftUrl={craftUrl}
-        stream={hub?.local ?? null}
-        onLink={setLink}
-        onUrl={setCraftUrl}
-        onAuto={() => mission.setAuto(!data.mission.autoRun)}
-        onStart={() => mission.startFlight()}
-        onConfirm={() => {
-          const current = activePoint(data, selfId);
-          if (current) mission.confirmPoint(current.id);
-        }}
-        onRtl={() => craftRef.current?.rtl()}
-      />
       <header className="float-bar">
         <button className="text-link" type="button" onClick={onBack}>코드</button>
         <b>{data.mission.joinCode}</b>
@@ -292,17 +272,37 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         onBase={setBase}
         onFullscreen={fullscreen}
       />
-      {feeds ? (
-        <div className="cam-grid">
-          {hub?.local ? <CameraTile stream={hub.local} label="나" local onSnap={(video) => void snap(video)} /> : null}
-          {sharing.filter((member) => member.userId !== selfId).map((member) => (
-            <CameraTile key={member.userId} stream={hub?.remotes.get(member.userId) ?? null} label={member.callsign} onSnap={(video) => void snap(video)} />
-          ))}
-          {!hub?.local && sharing.every((member) => member.userId === selfId) ? <p className="toast">켜진 카메라가 없어요.</p> : null}
-        </div>
-      ) : null}
       <motion.section className="sheet" initial={{ y: 36, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 30 }}>
         <span className="grab" aria-hidden="true" />
+        <PovCard
+          drone={drone ?? self}
+          point={activePoint(data, selfId)}
+          progress={(data.waypoints ?? []).filter((item) => item.step === 'confirmed').length}
+          total={(data.waypoints ?? []).length}
+          auto={Boolean(data.mission.autoRun)}
+          link={link}
+          note={linkNote}
+          craftUrl={craftUrl}
+          stream={hub?.local ?? null}
+          onLink={setLink}
+          onUrl={setCraftUrl}
+          onAuto={() => mission.setAuto(!data.mission.autoRun)}
+          onStart={() => mission.startFlight()}
+          onConfirm={() => {
+            const current = activePoint(data, selfId);
+            if (current) mission.confirmPoint(current.id);
+          }}
+          onRtl={() => craftRef.current?.rtl()}
+        />
+        {feeds ? (
+          <div className="cam-grid">
+            {sharing.filter((member) => member.userId !== selfId).map((member) => (
+              <CameraTile key={member.userId} stream={hub?.remotes.get(member.userId) ?? null} label={member.callsign} onSnap={(video) => void snap(video)} />
+            ))}
+            {sharing.every((member) => member.userId === selfId) ? <p className="sub">다른 카메라가 없어요.</p> : null}
+          </div>
+        ) : null}
+        <div className="sheet-main">
         {notice && tool === 'zone' && !drone ? <p className="toast" role="status">{notice.message}</p> : null}
         {camError ? <p className="error" role="alert">{camError}</p> : null}
         {mission.error ? <p className="error" role="alert">{mission.error}</p> : null}
@@ -335,7 +335,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
           <>
             <h2>{drone.callsign}</h2>
             <p className="sub">{drone.droneStatus === 'lost' ? '끊김' : seenLabel(drone.updatedAt)} · {drone.battery === null ? '배터리 —' : `배터리 ${drone.battery}%`}</p>
-            <p className="sub">{drone.speed === null ? '속도 —' : `${drone.speed}m/s`} · {drone.heading === null ? '방향 —' : `${Math.round(drone.heading)}°`}</p>
+            <p className="sub">속도 {drone.speed === null ? '—' : `${Math.round(drone.speed)}m/s`} · 방향 {drone.heading === null ? '—' : `${Math.round(drone.heading)}°`}</p>
             <p className="sub">{data.zones.find((item) => item.assigneeId === drone.userId)?.label ?? '맡은 구역 없음'}</p>
             <Press onClick={() => { setFeeds(true); if (drone.userId !== selfId) void hubRef.current?.watch(drone.userId); }}>카메라</Press>
             <button className="text-link" type="button" onClick={() => setMemberId(null)}>닫기</button>
@@ -381,6 +381,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
             {self?.droneStatus === 'lost' ? null : <button className="text-link" type="button" onClick={() => mission.dropLink()}>연결 끊기</button>}
           </div>
         ) : null}
+        </div>
       </motion.section>
     </div>
   );
@@ -432,9 +433,9 @@ function PovCard({
         {stream ? <video ref={videoRef} className="local" autoPlay muted playsInline /> : <div className="horizon" />}
         <p className="pov-read">
           <span>고도 {drone?.alt == null ? '—' : `${Math.round(drone.alt)}m`}</span>
-          <span>{drone?.speed == null ? '속도 —' : `${drone.speed}m/s`}</span>
-          <span>{drone?.battery == null ? '배터리 —' : `${drone.battery}%`}</span>
-          <span>{point ? point.label : '목표 없음'}</span>
+          <span>속도 {drone?.speed == null ? '—' : `${Math.round(drone.speed)}m/s`}</span>
+          <span>배터리 {drone?.battery == null ? '—' : `${drone.battery}%`}</span>
+          <span>목표 {point ? point.label : '없음'}</span>
         </p>
       </div>
       <div className="pov-body">

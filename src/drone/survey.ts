@@ -3,7 +3,7 @@ import { bearing } from '../map/geo';
 import type { MissionData, Waypoint, Zone } from '../mission/types';
 
 export const ARRIVE_M = 22;
-export const SIM_STEP_M = 18;
+export const SIM_STEP_M = 2.5;
 
 const labels = ['대기', '이동 중', '도착', '촬영 완료', '확인'] as const;
 
