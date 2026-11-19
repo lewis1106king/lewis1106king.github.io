@@ -1,6 +1,6 @@
 import { movedMeters, type DroneStatus, type LatLng, type Role } from '../domain/rules';
 import { bearing } from '../map/geo';
-import type { MissionData, PointKind, Zone } from '../mission/types';
+import type { LastSeen, MissionData, PointKind, Zone } from '../mission/types';
 function now(): string {
   return new Date().toISOString();
 }
@@ -42,6 +42,7 @@ export function freshMission(selfId: string, name: string): MissionData {
     events: [],
     notices: [],
     waypoints: [],
+    lastSeen: null,
   };
 }
 
@@ -210,8 +211,20 @@ export function setSharing(data: MissionData, selfId: string, camera: boolean): 
   };
 }
 
+export function setLastSeen(data: MissionData, selfId: string, point: LatLng, note: string): MissionData {
+  const seen: LastSeen = {
+    lat: round(point.lat),
+    lng: round(point.lng),
+    radius: 500,
+    note: note.trim().slice(0, 80),
+    at: now(),
+    by: selfId,
+  };
+  return { ...data, lastSeen: seen };
+}
+
 export function addMark(data: MissionData, selfId: string, kind: PointKind, point: LatLng, memo: string): MissionData {
-  const names: Record<PointKind, string> = { person: '발견', hazard: '위험', entry: '입구' };
+  const names: Record<PointKind, string> = { person: '발견', hazard: '위험', entry: '입구', clue: '의심' };
   return {
     ...data,
     points: [...data.points, {

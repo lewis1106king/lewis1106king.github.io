@@ -1,5 +1,5 @@
 import { isJoinCode } from '../domain/rules';
-import type { Activity, Handover, InterestPoint, Member, Mission, MissionData, Notice, Photo, SurveyStep, Waypoint, Zone } from '../mission/types';
+import type { Activity, Handover, InterestPoint, LastSeen, Member, Mission, MissionData, Notice, Photo, SurveyStep, Waypoint, Zone } from '../mission/types';
 
 export type Wire = {
   v: 1;
@@ -12,6 +12,7 @@ export type Wire = {
   events: Activity[];
   notices: Notice[];
   waypoints: Waypoint[];
+  lastSeen: LastSeen | null;
 };
 
 function time(value: string | null | undefined): number {
@@ -39,6 +40,7 @@ export function toWire(data: MissionData): Wire {
     events: data.events.slice(0, 40),
     notices: data.notices.slice(0, 20),
     waypoints: (data.waypoints ?? []).slice(0, 40),
+    lastSeen: data.lastSeen ?? null,
   };
 }
 
@@ -99,7 +101,7 @@ export function fromWire(value: unknown): MissionData | null {
       const lat = finite(point?.lat);
       const lng = finite(point?.lng);
       if (lat === null || lng === null || !point?.id) return [];
-      const kind = point.kind === 'hazard' || point.kind === 'entry' ? point.kind : 'person' as const;
+      const kind = point.kind === 'hazard' || point.kind === 'entry' || point.kind === 'clue' ? point.kind : 'person' as const;
       return [{
         id: clip(point.id, 80),
         lat,
@@ -145,6 +147,23 @@ export function fromWire(value: unknown): MissionData | null {
         updatedAt: clip(point.updatedAt, 40),
       }];
     }),
+    lastSeen: readLastSeen(wire.lastSeen),
+  };
+}
+
+function readLastSeen(value: LastSeen | null | undefined): LastSeen | null {
+  if (!value) return null;
+  const lat = finite(value.lat);
+  const lng = finite(value.lng);
+  if (lat === null || lng === null) return null;
+  const radius = finite(value.radius);
+  return {
+    lat,
+    lng,
+    radius: radius && radius > 0 ? Math.min(radius, 5000) : 500,
+    note: clip(value.note, 80),
+    at: clip(value.at, 40),
+    by: clip(value.by, 80),
   };
 }
 
@@ -180,6 +199,7 @@ export function mergeMission(local: MissionData | null, remote: MissionData): Mi
     events: prefer(local.events, remote.events, (item) => item.id, (item) => item.createdAt).sort((a, b) => time(b.createdAt) - time(a.createdAt)).slice(0, 40),
     notices: prefer(local.notices, remote.notices, (item) => item.id, (item) => item.createdAt).slice(0, 20),
     waypoints: prefer(local.waypoints ?? [], remote.waypoints ?? [], (item) => item.id, (item) => item.updatedAt),
+    lastSeen: time(remote.lastSeen?.at) >= time(local.lastSeen?.at) ? (remote.lastSeen ?? local.lastSeen) : local.lastSeen,
   };
 }
 
@@ -196,5 +216,6 @@ export function canonical(data: MissionData): string {
     events: byId(wire.events),
     notices: byId(wire.notices),
     waypoints: byId(wire.waypoints),
+    lastSeen: wire.lastSeen,
   });
 }

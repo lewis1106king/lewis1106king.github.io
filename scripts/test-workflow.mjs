@@ -8,7 +8,8 @@ writeFileSync(join(output, 'package.json'), '{"type":"module"}\n');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 execFileSync(pnpm, [
   'exec', 'tsc', '--ignoreConfig',
-  'src/domain/rules.ts', 'src/domain/rules.test.ts', 'src/domain/report.ts',
+  'src/domain/rules.ts', 'src/domain/rules.test.ts', 'src/domain/report.ts', 'src/domain/brief.ts', 'src/domain/brief.test.ts',
+  'src/lib/place.ts', 'src/lib/place.test.ts',
   'src/mission/types.ts', 'src/sync/merge.ts', 'src/sync/edit.ts', 'src/sync/merge.test.ts',
   'src/sync/handover.ts', 'src/sync/handover.test.ts',
   'src/map/geo.ts', 'src/map/geo.test.ts',
@@ -32,6 +33,8 @@ function rewriteImports(directory) {
 }
 rewriteImports(output);
 execFileSync(process.execPath, [join(output, 'domain', 'rules.test.js')], { stdio: 'inherit' });
+execFileSync(process.execPath, [join(output, 'domain', 'brief.test.js')], { stdio: 'inherit' });
+execFileSync(process.execPath, [join(output, 'lib', 'place.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'sync', 'merge.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'sync', 'handover.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'map', 'geo.test.js')], { stdio: 'inherit' });

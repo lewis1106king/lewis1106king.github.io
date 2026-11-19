@@ -24,7 +24,7 @@ function board(): MissionData {
       { userId: 'b', role: 'pilot', callsign: '상현', droneName: '', droneStatus: 'flying', battery: 80, lat: 37.51, lng: 127, accuracy: 5, heading: 0, speed: 0, camera: false, trail: [], updatedAt: '2026-11-19T00:00:00.000Z' },
     ],
     zones: [zone('구역1', 37.5), zone('구역2', 37.502)],
-    points: [], handovers: [], photos: [], events: [], notices: [], waypoints: [],
+    points: [], handovers: [], photos: [], events: [], notices: [], waypoints: [], lastSeen: null,
   };
 }
 

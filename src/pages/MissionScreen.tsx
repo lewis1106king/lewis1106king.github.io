@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { isValidPath, movedMeters, taskLabel, type LatLng } from '../domain/rules';
 import { reportHtml } from '../domain/report';
+import { briefingText, zoneCover } from '../domain/brief';
+import { searchPlaces, type PlaceHit } from '../lib/geocode';
 import { rectPath, ringArea, ringMeters } from '../map/geo';
 import Press from '../components/Press';
 import MapCanvas from '../mission/MapCanvas';
@@ -13,7 +15,7 @@ import { CameraHub, frameBlob, type Signal } from '../sync/camera';
 import type { Fix } from '../sync/edit';
 import { openRoom } from '../sync/room';
 
-type Tool = 'zone' | 'draw' | 'rect' | 'measure' | 'mark' | 'edit';
+type Tool = 'zone' | 'draw' | 'rect' | 'measure' | 'mark' | 'edit' | 'seen';
 
 function seenLabel(iso: string): string {
   const seconds = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
@@ -34,6 +36,9 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   const [mark, setMark] = useState<PointKind>('person');
   const [vertex, setVertex] = useState<number | null>(null);
   const [base, setBase] = useState<'map' | 'sat'>('map');
+  const [focus, setFocus] = useState<{ lat: number; lng: number; zoom: number; key: number } | null>(null);
+  const [locateKey, setLocateKey] = useState(0);
+  const [copied, setCopied] = useState(false);
   const [feeds, setFeeds] = useState(false);
   const [camError, setCamError] = useState('');
   const [link, setLink] = useState<'sim' | 'phone' | 'mavlink'>('sim');
@@ -186,6 +191,11 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
     if (tool === 'mark') {
       mission.addMark(mark, next, '');
       setTool('zone');
+      return;
+    }
+    if (tool === 'seen') {
+      mission.setLastSeen(next, '');
+      setTool('zone');
     }
   };
 
@@ -248,13 +258,18 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       <header className="float-bar">
         <button className="text-link" type="button" onClick={onBack}>코드</button>
         <b>{data.mission.joinCode}</b>
+        <span className="net">{mission.live ? '연결' : '이 기기'}</span>
         <span className={mission.live ? 'dot on' : 'dot'} aria-label={mission.live ? '연결됨' : '연결 중'} />
       </header>
+      <PlaceBar onJump={(hit) => setFocus({ ...hit, zoom: 16, key: Date.now() })} onLocate={() => setLocateKey((value) => value + 1)} />
       <MapCanvas
         zones={data.zones}
         points={data.points}
         members={data.members}
         waypoints={data.waypoints ?? []}
+        lastSeen={data.lastSeen}
+        focus={focus}
+        locateKey={locateKey}
         selfId={selfId}
         selectedZoneId={zone?.id ?? null}
         draft={draft}
@@ -321,6 +336,11 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
             <p className="sub">{Math.round(ringMeters(draft))}m · {Math.round(ringArea(draft)).toLocaleString('ko-KR')}㎡</p>
             <Press tone="quiet" onClick={() => { setDraft([]); setTool('zone'); }}>닫기</Press>
           </>
+        ) : tool === 'seen' ? (
+          <>
+            <h2>마지막 장소를 누르세요.</h2>
+            <Press tone="quiet" onClick={() => setTool('zone')}>닫기</Press>
+          </>
         ) : tool === 'mark' ? (
           <>
             <h2>어디에 표시할까요?</h2>
@@ -328,6 +348,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
               <button className={mark === 'person' ? 'text-link on' : 'text-link'} type="button" onClick={() => setMark('person')}>발견</button>
               <button className={mark === 'hazard' ? 'text-link on' : 'text-link'} type="button" onClick={() => setMark('hazard')}>위험</button>
               <button className={mark === 'entry' ? 'text-link on' : 'text-link'} type="button" onClick={() => setMark('entry')}>입구</button>
+              <button className={mark === 'clue' ? 'text-link on' : 'text-link'} type="button" onClick={() => setMark('clue')}>의심</button>
             </div>
             <Press tone="quiet" onClick={() => setTool('zone')}>닫기</Press>
           </>
@@ -343,13 +364,18 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         ) : poi ? (
           <>
             <h2>{poi.label}</h2>
-            <p className="sub">{poi.memo || '메모 없음'}</p>
+            <p className="sub">{poi.lat.toFixed(5)}, {poi.lng.toFixed(5)}</p>
+            <p className="sub">{poi.createdAt ? new Date(poi.createdAt).toLocaleString('ko-KR') : ''} {poi.memo}</p>
             <button className="text-link" type="button" onClick={() => setPointId(null)}>닫기</button>
           </>
         ) : zone ? (
           <>
             <h2>{zone.label}</h2>
-            <p className="sub">{owner?.callsign ?? '대기'} · {taskLabel[zone.taskStatus]}</p>
+            <p className="sub">{owner?.callsign ?? '대기'} · {taskLabel[zone.taskStatus]} · {(() => {
+              const cover = zoneCover(zone.path, data.members.flatMap((member) => member.trail));
+              if (!cover.total || cover.seen === 0) return '미수색';
+              return `수색 ${Math.round((cover.seen / cover.total) * 100)}%`;
+            })()}</p>
             <div className="pair">
               {zone.taskStatus === 'completed' ? <p className="done">완료</p> : <Press onClick={() => mission.completeZone(zone.id)}>완료</Press>}
               <label className="press press-quiet file">
@@ -376,6 +402,28 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
             <button className="text-link" type="button" onClick={() => { setTool('rect'); setDraft([]); }}>사각형</button>
             <button className="text-link" type="button" onClick={() => { setTool('measure'); setDraft([]); }}>거리</button>
             <button className="text-link" type="button" onClick={() => setTool('mark')}>표시</button>
+            <button className="text-link" type="button" onClick={() => setTool('seen')}>최종 목격</button>
+            <button className="text-link" type="button" onClick={() => {
+              void navigator.clipboard.writeText(briefingText(data)).then(() => setCopied(true));
+            }}>{copied ? '복사했어요' : '상황 복사'}</button>
+            <button className="text-link" type="button" onClick={() => {
+              const html = reportHtml({
+                title: data.mission.title,
+                generatedAt: new Date().toISOString(),
+                pendingZoneIds: [],
+                extra: briefingText(data),
+                zones: data.zones.map((item) => ({
+                  id: item.id, label: item.label, taskStatus: item.taskStatus, observationStatus: item.observationStatus,
+                  assigneeId: item.assigneeId, photoCount: data.photos.filter((photo) => photo.zoneId === item.id).length,
+                  memo: item.memo, reviewReason: item.reviewReason,
+                })),
+              });
+              const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = '수색-기록.html';
+              link.click();
+            }}>기록</button>
             <button className="text-link" type="button" onClick={() => setFeeds((value) => !value)}>영상</button>
             <button className="text-link" type="button" onClick={() => void shareCamera()}>{hub?.local ? '카메라 끄기' : '내 카메라'}</button>
             {self?.droneStatus === 'lost' ? null : <button className="text-link" type="button" onClick={() => mission.dropLink()}>연결 끊기</button>}
@@ -384,6 +432,44 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         </div>
       </motion.section>
     </div>
+  );
+}
+
+function PlaceBar({ onJump, onLocate }: { onJump: (hit: PlaceHit) => void; onLocate: () => void }) {
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState<PlaceHit[]>([]);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    setNote('');
+    try {
+      const found = await searchPlaces(query);
+      setHits(found);
+      if (!found.length) setNote('그 장소를 찾지 못했어요.');
+      else onJump(found[0]);
+    } catch (reason) {
+      setHits([]);
+      setNote(reason instanceof Error ? reason.message : '장소 검색이 잠시 안 됩니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form className="place-bar" onSubmit={(event) => { event.preventDefault(); void run(); }}>
+      <input aria-label="장소" value={query} placeholder="주소, 장소, 위도,경도" onChange={(event) => setQuery(event.target.value)} />
+      <button type="submit" disabled={busy || query.trim().length < 2}>{busy ? '찾는 중' : '찾기'}</button>
+      <button type="button" onClick={onLocate}>내 위치</button>
+      {note ? <p className="place-note">{note}</p> : null}
+      {hits.length ? <p className="place-note">장소 이름 © OpenStreetMap</p> : null}
+      {hits.length > 1 ? (
+        <ul className="place-list">
+          {hits.map((hit) => (
+            <li key={`${hit.lat}-${hit.lng}-${hit.label}`}><button type="button" onClick={() => onJump(hit)}>{hit.label}</button></li>
+          ))}
+        </ul>
+      ) : null}
+    </form>
   );
 }
 

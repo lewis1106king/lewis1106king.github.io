@@ -3,7 +3,8 @@ import L from 'leaflet';
 import type { LatLng } from '../domain/rules';
 import { taskLabel } from '../domain/rules';
 import { cellCovers, searchGrid } from '../map/geo';
-import type { InterestPoint, Member, Waypoint, Zone } from './types';
+import { zoneCover } from '../domain/brief';
+import type { InterestPoint, LastSeen, Member, Waypoint, Zone } from './types';
 
 const tone: Record<string, string> = {
   unverified: '#3182f6',
@@ -13,13 +14,16 @@ const tone: Record<string, string> = {
   completed: '#03b26c',
 };
 
-const marks: Record<string, string> = { person: '#03b26c', hazard: '#f04452', entry: '#3182f6' };
+const marks: Record<string, string> = { person: '#03b26c', hazard: '#f04452', entry: '#3182f6', clue: '#ff9f0a' };
 
 type MapCanvasProps = {
   zones: Zone[];
   points: InterestPoint[];
   members: Member[];
   waypoints?: Waypoint[];
+  lastSeen?: LastSeen | null;
+  focus?: { lat: number; lng: number; zoom: number; key: number } | null;
+  locateKey?: number;
   selfId?: string;
   selectedZoneId?: string | null;
   draft?: LatLng[];
@@ -44,6 +48,9 @@ export default function MapCanvas({
   points,
   members,
   waypoints = [],
+  lastSeen = null,
+  focus = null,
+  locateKey = 0,
   selfId,
   selectedZoneId,
   draft = [],
@@ -104,11 +111,16 @@ export default function MapCanvas({
     aerialRef.current = aerial;
     layerRef.current = L.layerGroup().addTo(map);
     map.on('click', (event) => pickRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng }));
-    map.on('zoomend', () => {
+    const remember = () => {
+      const center = map.getCenter();
+      frameRef.current?.setAttribute('data-lat', center.lat.toFixed(3));
+      frameRef.current?.setAttribute('data-lng', center.lng.toFixed(3));
       const next = map.getZoom();
       setZoom(next);
       zoomRef.current?.(next);
-    });
+    };
+    map.on('moveend', remember);
+    map.on('zoomend', remember);
     mapRef.current = map;
     const frame = window.requestAnimationFrame(() => map.invalidateSize());
     if (closeUp) map.locate({ setView: true, maxZoom: 19, enableHighAccuracy: true });
@@ -142,14 +154,17 @@ export default function MapCanvas({
     zones.forEach((zone) => {
       if (zone.path.length < 3) return;
       const selected = zone.id === selectedZoneId;
-      const color = zone.taskStatus === 'completed' ? tone.completed : zone.taskStatus === 'interrupted' ? tone.interrupted : tone[zone.observationStatus];
+      const cover = zoneCover(zone.path, members.flatMap((member) => member.trail));
+      const bare = cover.total > 0 && cover.seen === 0;
+      const color = bare ? '#ff9f0a' : zone.taskStatus === 'completed' ? tone.completed : zone.taskStatus === 'interrupted' ? tone.interrupted : tone[zone.observationStatus];
       const polygon = L.polygon(zone.path.map((point) => [point.lat, point.lng] as [number, number]), {
         color,
         weight: selected ? 3 : 2,
         fillColor: color,
         fillOpacity: selected ? 0.22 : 0.12,
       });
-      polygon.bindTooltip(`${zone.label} · ${taskLabel[zone.taskStatus]}`, { permanent: true, direction: 'center', className: 'zone-label' });
+      const coverLabel = bare ? '미수색' : `수색 ${Math.round((cover.seen / Math.max(cover.total, 1)) * 100)}%`;
+      polygon.bindTooltip(`${zone.label} · ${taskLabel[zone.taskStatus]} · ${coverLabel}`, { permanent: true, direction: 'center', className: 'zone-label' });
       polygon.on('click', (event) => {
         if (pickRef.current) return;
         L.DomEvent.stopPropagation(event);
@@ -207,6 +222,14 @@ export default function MapCanvas({
       });
       marker.addTo(layer);
     });
+    if (lastSeen) {
+      [lastSeen.radius, lastSeen.radius / 2].forEach((radius) => {
+        L.circle([lastSeen.lat, lastSeen.lng], { radius, color: '#f04452', weight: 2, fillColor: '#f04452', fillOpacity: 0.04 }).addTo(layer);
+      });
+      L.circleMarker([lastSeen.lat, lastSeen.lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#f04452', fillOpacity: 1 })
+        .bindTooltip('최종 목격', { permanent: true, direction: 'top', className: 'zone-label' })
+        .addTo(layer);
+    }
     if (waypoints.length > 1) {
       L.polyline(waypoints.map((point) => [point.lat, point.lng] as [number, number]), {
         color: '#191f28', weight: 3, opacity: 0.8,
@@ -249,7 +272,17 @@ export default function MapCanvas({
       });
       marker.addTo(layer);
     });
-  }, [zones, points, members, waypoints, draft, selectedZoneId, selfId]);
+  }, [zones, points, members, waypoints, lastSeen, draft, selectedZoneId, selfId]);
+
+  useEffect(() => {
+    if (!focus) return;
+    mapRef.current?.flyTo([focus.lat, focus.lng], focus.zoom, { duration: 0.6 });
+  }, [focus]);
+
+  useEffect(() => {
+    if (!locateKey) return;
+    mapRef.current?.locate({ setView: true, maxZoom: 19, enableHighAccuracy: true });
+  }, [locateKey]);
 
   useEffect(() => {
     if (!active) return undefined;

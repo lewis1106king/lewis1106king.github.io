@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DroneStatus, LatLng } from '../domain/rules';
 import { blobToDataUrl, compressImage } from '../lib/imageFile';
-import { addMark, addPhoto, addZone, beat, completeZone, moveMember, moveVertex, setLevel, setSharing, type Fix } from '../sync/edit';
+import { addMark, addPhoto, addZone, beat, completeZone, moveMember, moveVertex, setLastSeen, setLevel, setSharing, type Fix } from '../sync/edit';
 import type { PointKind } from './types';
 import { applyCraft, autoFollow, buildRoute, confirmNext, markArrival, markShot, placeCraft, setAutoRun, southOf } from '../drone/survey';
 import { autoAssign, dropDrone, undoHandover } from '../sync/handover';
@@ -67,6 +67,7 @@ export function useMission(code: string, selfId: string) {
     setSharing: (camera: boolean) => change((current) => setSharing(current, selfId, camera)),
     setBattery,
     addMark: (kind: PointKind, point: LatLng, memo: string) => change((current) => addMark(current, selfId, kind, point, memo)),
+    setLastSeen: (point: LatLng, note: string) => change((current) => setLastSeen(current, selfId, point, note)),
     moveVertex: (zoneId: string, index: number, point: LatLng) => change((current) => moveVertex(current, zoneId, index, point)),
     startFlight: () => change((current) => {
       const routed = buildRoute(current, selfId);

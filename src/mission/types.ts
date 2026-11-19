@@ -56,7 +56,16 @@ export type Zone = {
   updatedAt: string;
 };
 
-export type PointKind = 'person' | 'hazard' | 'entry';
+export type PointKind = 'person' | 'hazard' | 'entry' | 'clue';
+
+export type LastSeen = {
+  lat: number;
+  lng: number;
+  radius: number;
+  note: string;
+  at: string;
+  by: string;
+};
 
 export type InterestPoint = {
   id: string;
@@ -118,4 +127,5 @@ export type MissionData = {
   events: Activity[];
   notices: Notice[];
   waypoints: Waypoint[];
+  lastSeen: LastSeen | null;
 };

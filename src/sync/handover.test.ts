@@ -37,6 +37,7 @@ function board(zones: Zone[], extra = member('near', '가까운', 37.5, 127)): M
     points: [],
     handovers: [],
     waypoints: [],
+    lastSeen: null,
     photos: [{
       id: 'p1', zoneId: zones[0]?.id ?? 'z', storagePath: 'p1', memo: '현장', uploadedBy: 'down',
       createdAt: '2026-11-17T00:00:00.000Z', ready: true, url: 'data:image/jpeg;base64,abc',

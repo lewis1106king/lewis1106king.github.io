@@ -16,7 +16,7 @@ function mission(code: string): MissionData {
       lat: null, lng: null, accuracy: null, heading: null, speed: null, camera: false, trail: [],
       updatedAt: '2026-11-17T00:00:00.000Z',
     }],
-    zones: [],     points: [], handovers: [], photos: [], events: [], notices: [], waypoints: [],
+    zones: [],     points: [], handovers: [], photos: [], events: [], notices: [], waypoints: [], lastSeen: null,
   };
 }
 
