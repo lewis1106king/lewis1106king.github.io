@@ -1,5 +1,5 @@
 import { isJoinCode } from '../domain/rules';
-import type { Activity, Handover, InterestPoint, Member, Mission, MissionData, Notice, Photo, Zone } from '../mission/types';
+import type { Activity, Handover, InterestPoint, Member, Mission, MissionData, Notice, Photo, SurveyStep, Waypoint, Zone } from '../mission/types';
 
 export type Wire = {
   v: 1;
@@ -11,6 +11,7 @@ export type Wire = {
   photos: Array<Omit<Photo, 'url'>>;
   events: Activity[];
   notices: Notice[];
+  waypoints: Waypoint[];
 };
 
 function time(value: string | null | undefined): number {
@@ -34,9 +35,10 @@ export function toWire(data: MissionData): Wire {
     zones: data.zones,
     points: data.points,
     handovers: data.handovers,
-    photos: data.photos.slice(0, 8).map(({ url, ...photo }) => ({ ...photo, ready: photo.ready || Boolean(url) })),
+    photos: data.photos.slice(0, 16).map(({ url, ...photo }) => ({ ...photo, ready: photo.ready || Boolean(url) })),
     events: data.events.slice(0, 40),
     notices: data.notices.slice(0, 20),
+    waypoints: (data.waypoints ?? []).slice(0, 40),
   };
 }
 
@@ -52,6 +54,8 @@ export function fromWire(value: unknown): MissionData | null {
       joinCode: mission.joinCode.toUpperCase(),
       createdBy: clip(mission.createdBy, 80),
       createdAt: clip(mission.createdAt, 40),
+      autoRun: Boolean(mission.autoRun),
+      autoRunAt: clip(mission.autoRunAt, 40),
     },
     members: (Array.isArray(wire.members) ? wire.members : []).slice(0, 24).map((member) => ({
       userId: clip(member.userId, 80),
@@ -63,6 +67,7 @@ export function fromWire(value: unknown): MissionData | null {
       lat: finite(member.lat),
       lng: finite(member.lng),
       accuracy: finite(member.accuracy),
+      alt: finite(member.alt),
       heading: finite(member.heading),
       speed: finite(member.speed),
       camera: Boolean(member.camera),
@@ -87,6 +92,7 @@ export function fromWire(value: unknown): MissionData | null {
       reviewReason: clip(zone.reviewReason, 140),
       memo: clip(zone.memo, 140),
       assigneeId: zone.assigneeId ? clip(zone.assigneeId, 80) : null,
+      surveyStep: ['wait', 'enroute', 'arrived', 'shot', 'confirmed'].includes(String(zone.surveyStep)) ? zone.surveyStep as SurveyStep : null,
       updatedAt: clip(zone.updatedAt, 40),
     })).filter((zone) => zone.id),
     points: (Array.isArray(wire.points) ? wire.points : []).slice(0, 40).flatMap((point) => {
@@ -122,6 +128,23 @@ export function fromWire(value: unknown): MissionData | null {
     })).filter((photo) => photo.id),
     events: (Array.isArray(wire.events) ? wire.events : []).slice(0, 40),
     notices: (Array.isArray(wire.notices) ? wire.notices : []).slice(0, 20),
+    waypoints: (Array.isArray(wire.waypoints) ? wire.waypoints : []).slice(0, 40).flatMap((point) => {
+      const lat = finite(point?.lat);
+      const lng = finite(point?.lng);
+      const step = ['wait', 'enroute', 'arrived', 'shot', 'confirmed'].includes(String(point?.step)) ? point.step as SurveyStep : 'wait';
+      if (!point?.id || lat === null || lng === null) return [];
+      return [{
+        id: clip(point.id, 80),
+        zoneId: point.zoneId ? clip(point.zoneId, 80) : null,
+        lat,
+        lng,
+        label: clip(point.label, 24) || '지점',
+        assigneeId: clip(point.assigneeId, 80),
+        order: typeof point.order === 'number' ? point.order : 0,
+        step,
+        updatedAt: clip(point.updatedAt, 40),
+      }];
+    }),
   };
 }
 
@@ -138,7 +161,9 @@ function prefer<T>(local: T[], remote: T[], idOf: (item: T) => string, stamp: (i
 
 export function mergeMission(local: MissionData | null, remote: MissionData): MissionData {
   if (!local) return remote;
-  const mission = time(local.mission.createdAt) <= time(remote.mission.createdAt) ? local.mission : remote.mission;
+  const baseMission = time(local.mission.createdAt) <= time(remote.mission.createdAt) ? local.mission : remote.mission;
+  const autoMission = time(local.mission.autoRunAt) >= time(remote.mission.autoRunAt) ? local.mission : remote.mission;
+  const mission = { ...baseMission, autoRun: Boolean(autoMission.autoRun), autoRunAt: autoMission.autoRunAt };
   const photos = new Map<string, Photo>();
   for (const photo of [...local.photos, ...remote.photos]) {
     const prev = photos.get(photo.id);
@@ -154,6 +179,7 @@ export function mergeMission(local: MissionData | null, remote: MissionData): Mi
     photos: [...photos.values()],
     events: prefer(local.events, remote.events, (item) => item.id, (item) => item.createdAt).sort((a, b) => time(b.createdAt) - time(a.createdAt)).slice(0, 40),
     notices: prefer(local.notices, remote.notices, (item) => item.id, (item) => item.createdAt).slice(0, 20),
+    waypoints: prefer(local.waypoints ?? [], remote.waypoints ?? [], (item) => item.id, (item) => item.updatedAt),
   };
 }
 
@@ -169,5 +195,6 @@ export function canonical(data: MissionData): string {
     photos: byId(wire.photos),
     events: byId(wire.events),
     notices: byId(wire.notices),
+    waypoints: byId(wire.waypoints),
   });
 }

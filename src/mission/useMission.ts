@@ -3,6 +3,7 @@ import type { DroneStatus, LatLng } from '../domain/rules';
 import { blobToDataUrl, compressImage } from '../lib/imageFile';
 import { addMark, addPhoto, addZone, beat, completeZone, moveMember, moveVertex, setLevel, setSharing, type Fix } from '../sync/edit';
 import type { PointKind } from './types';
+import { applyCraft, autoFollow, buildRoute, confirmNext, markArrival, markShot, placeCraft, setAutoRun, southOf } from '../drone/survey';
 import { autoAssign, dropDrone, undoHandover } from '../sync/handover';
 import { openRoom } from '../sync/room';
 import type { MissionData } from './types';
@@ -67,6 +68,18 @@ export function useMission(code: string, selfId: string) {
     setBattery,
     addMark: (kind: PointKind, point: LatLng, memo: string) => change((current) => addMark(current, selfId, kind, point, memo)),
     moveVertex: (zoneId: string, index: number, point: LatLng) => change((current) => moveVertex(current, zoneId, index, point)),
+    startFlight: () => change((current) => {
+      const routed = buildRoute(current, selfId);
+      const first = (routed.waypoints ?? []).find((point) => point.assigneeId === selfId && point.step === 'enroute');
+      const mine = routed.members.find((member) => member.userId === selfId);
+      if (!first || mine?.lat !== null && mine?.lat !== undefined) return routed;
+      return placeCraft(routed, selfId, southOf(first, 90));
+    }),
+    tickSurvey: () => change((current) => autoFollow(markArrival(current))),
+    confirmPoint: (pointId: string) => change((current) => confirmNext(current, pointId)),
+    markShot: (pointId: string) => change((current) => markShot(current, pointId)),
+    setAuto: (autoRun: boolean) => change((current) => setAutoRun(current, autoRun)),
+    applyCraft: (fix: { lat: number; lng: number; alt: number | null; heading: number | null; speed: number | null; battery: number | null }) => change((current) => applyCraft(current, selfId, fix)),
     dropLink: () => change((current) => dropDrone(current, selfId, 'lost')),
     drainBattery: () => change((current) => dropDrone(current, selfId, 'battery')),
     undoHandover: (handoverId: string) => change((current) => undoHandover(current, handoverId)),

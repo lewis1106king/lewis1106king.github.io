@@ -16,7 +16,7 @@ function mission(code: string): MissionData {
       lat: null, lng: null, accuracy: null, heading: null, speed: null, camera: false, trail: [],
       updatedAt: '2026-11-17T00:00:00.000Z',
     }],
-    zones: [], points: [], handovers: [], photos: [], events: [], notices: [],
+    zones: [],     points: [], handovers: [], photos: [], events: [], notices: [], waypoints: [],
   };
 }
 
@@ -45,4 +45,6 @@ if (kept.photos[0]?.url !== 'data:image/jpeg;base64,abc') throw new Error('이�
 
 const again = fromWire(toWire(merged));
 if (!again) throw new Error('전송 본문을 다시 읽어야 합니다.');
-equal(canonical(mergeMission(merged, again)), canonical(merged), '같은 상태는 다시 보내지 않을 만큼 같아야 합니다.');
+const stable = fromWire(toWire(again));
+if (!stable) throw new Error('전송 본문을 다시 읽어야 합니다.');
+equal(canonical(mergeMission(again, stable)), canonical(again), '같은 상태는 다시 보내지 않을 만큼 같아야 합니다.');

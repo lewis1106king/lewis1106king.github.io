@@ -96,10 +96,26 @@ export function autoAssign(data: MissionData, nowMs: number): MissionData {
   for (const member of data.members) {
     const reason = downReason(member, nowMs);
     if (!reason) continue;
-    const zones = next.zones.filter((zone) => zone.assigneeId === member.userId && zone.taskStatus !== 'completed');
+    const zones = next.zones.filter((zone) => zone.assigneeId === member.userId && zone.taskStatus !== 'completed' && zone.surveyStep !== 'confirmed');
     for (const zone of zones) next = handZone(next, zone, member, reason, nowMs);
   }
-  return next;
+  return carryRoute(next);
+}
+
+function carryRoute(data: MissionData): MissionData {
+  if (!data.waypoints?.length) return data;
+  const waypoints = data.waypoints.map((point) => {
+    if (point.step === 'confirmed' || !point.zoneId) return point;
+    const zone = data.zones.find((item) => item.id === point.zoneId);
+    if (!zone?.assigneeId || zone.assigneeId === point.assigneeId) return point;
+    return {
+      ...point,
+      assigneeId: zone.assigneeId,
+      step: point.step === 'wait' ? 'wait' as const : 'enroute' as const,
+      updatedAt: zone.updatedAt,
+    };
+  });
+  return { ...data, waypoints };
 }
 
 export function dropDrone(data: MissionData, selfId: string, kind: 'lost' | 'battery', nowMs = Date.now()): MissionData {

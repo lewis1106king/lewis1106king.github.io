@@ -41,6 +41,7 @@ export function freshMission(selfId: string, name: string): MissionData {
     photos: [],
     events: [],
     notices: [],
+    waypoints: [],
   };
 }
 
@@ -107,7 +108,7 @@ export function completeZone(data: MissionData, zoneId: string): MissionData {
 }
 
 export function addPhoto(data: MissionData, zoneId: string, selfId: string, url: string): MissionData {
-  if (data.photos.length >= 8) return data;
+  if (data.photos.length >= 16) return data;
   const stamp = now();
   const id = crypto.randomUUID();
   return {

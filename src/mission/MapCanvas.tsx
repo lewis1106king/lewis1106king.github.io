@@ -3,7 +3,7 @@ import L from 'leaflet';
 import type { LatLng } from '../domain/rules';
 import { taskLabel } from '../domain/rules';
 import { cellCovers, searchGrid } from '../map/geo';
-import type { InterestPoint, Member, Zone } from './types';
+import type { InterestPoint, Member, Waypoint, Zone } from './types';
 
 const tone: Record<string, string> = {
   unverified: '#3182f6',
@@ -19,6 +19,7 @@ type MapCanvasProps = {
   zones: Zone[];
   points: InterestPoint[];
   members: Member[];
+  waypoints?: Waypoint[];
   selfId?: string;
   selectedZoneId?: string | null;
   draft?: LatLng[];
@@ -42,6 +43,7 @@ export default function MapCanvas({
   zones,
   points,
   members,
+  waypoints = [],
   selfId,
   selectedZoneId,
   draft = [],
@@ -149,6 +151,7 @@ export default function MapCanvas({
       });
       polygon.bindTooltip(`${zone.label} · ${taskLabel[zone.taskStatus]}`, { permanent: true, direction: 'center', className: 'zone-label' });
       polygon.on('click', (event) => {
+        if (pickRef.current) return;
         L.DomEvent.stopPropagation(event);
         selectRef.current?.(zone.id);
       });
@@ -204,6 +207,22 @@ export default function MapCanvas({
       });
       marker.addTo(layer);
     });
+    if (waypoints.length > 1) {
+      L.polyline(waypoints.map((point) => [point.lat, point.lng] as [number, number]), {
+        color: '#191f28', weight: 3, opacity: 0.8,
+      }).addTo(layer);
+    }
+    waypoints.forEach((point, index) => {
+      const done = point.step === 'confirmed';
+      const current = point.step === 'enroute' || point.step === 'arrived' || point.step === 'shot';
+      L.circleMarker([point.lat, point.lng], {
+        radius: 8,
+        color: '#fff',
+        weight: 2,
+        fillColor: done ? '#03b26c' : current ? '#3182f6' : '#8b95a1',
+        fillOpacity: 1,
+      }).bindTooltip(`${index + 1} ${point.label}`, { permanent: true, direction: 'top', className: 'zone-label' }).addTo(layer);
+    });
     members.forEach((member) => {
       if (member.trail.length > 1) {
         L.polyline(member.trail.map((point) => [point.lat, point.lng] as [number, number]), {
@@ -230,7 +249,7 @@ export default function MapCanvas({
       });
       marker.addTo(layer);
     });
-  }, [zones, points, members, draft, selectedZoneId, selfId]);
+  }, [zones, points, members, waypoints, draft, selectedZoneId, selfId]);
 
   useEffect(() => {
     if (!active) return undefined;

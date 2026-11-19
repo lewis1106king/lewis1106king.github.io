@@ -304,6 +304,43 @@ h1, h2, p { margin: 0; }
 .cam-tile figcaption { display: flex; justify-content: space-between; margin-top: -26px; padding: 0 8px; color: #fff; font-size: 13px; font-weight: 800; position: relative; }
 .cam-tile button { border: 0; background: transparent; color: #fff; font-weight: 800; }
 .text-link.on { color: var(--blue); }
+.pov {
+  position: absolute;
+  z-index: 620;
+  top: 74px;
+  right: 16px;
+  width: min(340px, calc(100vw - 32px));
+  border-radius: 24px;
+  overflow: hidden;
+  background: #11161d;
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(25, 31, 40, 0.18);
+}
+.pov-view { position: relative; height: 190px; background: #1b2430; }
+.horizon { height: 100%; background: linear-gradient(#8eb8ea 0 52%, #d7e4bc 52% 100%); }
+.pov video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pov-read {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.pov-body { display: grid; gap: 10px; padding: 12px 14px 14px; }
+.pov-body .sub { color: #d7dde6; }
+.pov-body input { min-height: 44px; border-radius: 12px; }
+.progress { height: 6px; border-radius: 99px; background: #2a3340; overflow: hidden; }
+.progress i { display: block; height: 100%; background: #3182f6; }
+@media (max-width: 860px) {
+  .pov { top: auto; bottom: 210px; width: calc(100% - 24px); left: 12px; }
+  .pov-view { height: 120px; }
+}
 .map-locate {
   position: absolute;
   z-index: 500;

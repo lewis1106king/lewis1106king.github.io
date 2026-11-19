@@ -6,7 +6,9 @@ import { rectPath, ringArea, ringMeters } from '../map/geo';
 import Press from '../components/Press';
 import MapCanvas from '../mission/MapCanvas';
 import { useMission } from '../mission/useMission';
-import type { PointKind } from '../mission/types';
+import type { Member, PointKind, Waypoint } from '../mission/types';
+import { connectMavlink, type CraftLink } from '../drone/mavlink';
+import { activePoint, flyToward, stepLabel } from '../drone/survey';
 import { CameraHub, frameBlob, type Signal } from '../sync/camera';
 import type { Fix } from '../sync/edit';
 import { openRoom } from '../sync/room';
@@ -34,6 +36,17 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   const [base, setBase] = useState<'map' | 'sat'>('map');
   const [feeds, setFeeds] = useState(false);
   const [camError, setCamError] = useState('');
+  const [link, setLink] = useState<'sim' | 'phone' | 'mavlink'>('sim');
+  const linkRef = useRef(link);
+  linkRef.current = link;
+  const [craftUrl, setCraftUrl] = useState('ws://127.0.0.1:8777');
+  const [linkNote, setLinkNote] = useState('');
+  const missionRef = useRef(mission);
+  missionRef.current = mission;
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const craftRef = useRef<CraftLink | null>(null);
+  const shotRef = useRef('');
   const [camTick, setCamTick] = useState(0);
   const hubRef = useRef<CameraHub | null>(null);
   const point = useRef<Fix | null>(null);
@@ -71,17 +84,65 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       };
       const last = point.current;
       point.current = next;
-      if (last && movedMeters(last, next) < 8) return;
+      if (linkRef.current === 'sim' || (last && movedMeters(last, next) < 8)) return;
       mission.beat(next);
     }, () => undefined, { enableHighAccuracy: true, maximumAge: 4000 });
     return () => navigator.geolocation.clearWatch(watch);
   }, [mission.beat]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => mission.beat(point.current), 5000);
-    mission.beat(point.current);
+    const timer = window.setInterval(() => {
+      if (linkRef.current !== 'sim') mission.beat(point.current);
+    }, 5000);
     return () => window.clearInterval(timer);
   }, [mission.beat]);
+
+  useEffect(() => {
+    if (link !== 'sim') return undefined;
+    const timer = window.setInterval(() => {
+      const current = dataRef.current;
+      const api = missionRef.current;
+      if (!current) return;
+      const mine = current.members.find((member) => member.userId === selfId);
+      if (!mine || mine.droneStatus === 'lost') return;
+      const target = activePoint(current, selfId);
+      if (!target) return;
+      if (mine.lat === null || mine.lng === null) {
+        api.applyCraft({ lat: target.lat - 90 / 111_320, lng: target.lng, alt: 30, heading: 0, speed: 0, battery: 76 });
+        return;
+      }
+      if (target.step !== 'enroute') return;
+      const step = flyToward({ lat: mine.lat, lng: mine.lng }, target);
+      api.applyCraft({ lat: step.lat, lng: step.lng, alt: step.done ? 18 : 32, heading: step.heading, speed: step.speed, battery: mine.battery ?? 76 });
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [link, selfId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => missionRef.current.tickSurvey(), 300);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+    const target = activePoint(data, selfId);
+    if (!target || target.step !== 'arrived' || shotRef.current === target.id) return;
+    shotRef.current = target.id;
+    const video = document.querySelector('video.local') as HTMLVideoElement | null;
+    void (video && video.videoWidth > 0 ? frameBlob(video) : paintShot(target.label, self?.alt ?? 20))
+      .then((blob) => missionRef.current.uploadPhoto(target.zoneId || target.id, new File([blob], 'scan.jpg', { type: 'image/jpeg' })))
+      .then(() => missionRef.current.markShot(target.id))
+      .catch(() => { shotRef.current = ''; });
+  }, [data, selfId, self?.alt]);
+
+  useEffect(() => {
+    if (link !== 'mavlink') return undefined;
+    const craft = connectMavlink(craftUrl, (fix) => {
+      missionRef.current.applyCraft(fix);
+    }, setLinkNote);
+    craftRef.current = craft;
+    return () => craft.close();
+  }, [link, craftUrl]);
 
   useEffect(() => {
     const battery = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
@@ -180,7 +241,30 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       data-notice={notice?.message ?? ''}
       data-drone={drone?.callsign ?? ''}
       data-feeds={feeds ? '1' : '0'}
+      data-step={activePoint(data, selfId)?.step ?? ''}
+      data-route={activePoint(data, selfId)?.assigneeId ?? ''}
+      data-progress={`${(data.waypoints ?? []).filter((point) => point.step === 'confirmed').length}/${(data.waypoints ?? []).length}`}
     >
+      <PovCard
+        drone={drone ?? self}
+        point={activePoint(data, selfId)}
+        progress={(data.waypoints ?? []).filter((item) => item.step === 'confirmed').length}
+        total={(data.waypoints ?? []).length}
+        auto={Boolean(data.mission.autoRun)}
+        link={link}
+        note={linkNote}
+        craftUrl={craftUrl}
+        stream={hub?.local ?? null}
+        onLink={setLink}
+        onUrl={setCraftUrl}
+        onAuto={() => mission.setAuto(!data.mission.autoRun)}
+        onStart={() => mission.startFlight()}
+        onConfirm={() => {
+          const current = activePoint(data, selfId);
+          if (current) mission.confirmPoint(current.id);
+        }}
+        onRtl={() => craftRef.current?.rtl()}
+      />
       <header className="float-bar">
         <button className="text-link" type="button" onClick={onBack}>코드</button>
         <b>{data.mission.joinCode}</b>
@@ -190,6 +274,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         zones={data.zones}
         points={data.points}
         members={data.members}
+        waypoints={data.waypoints ?? []}
         selfId={selfId}
         selectedZoneId={zone?.id ?? null}
         draft={draft}
@@ -287,6 +372,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         )}
         {tool === 'zone' && !drone ? (
           <div className="links">
+            <button className="text-link" type="button" onClick={() => { setTool('draw'); setSelectedId(null); setDraft([]); }}>구역 추가</button>
             <button className="text-link" type="button" onClick={() => { setTool('rect'); setDraft([]); }}>사각형</button>
             <button className="text-link" type="button" onClick={() => { setTool('measure'); setDraft([]); }}>거리</button>
             <button className="text-link" type="button" onClick={() => setTool('mark')}>표시</button>
@@ -297,6 +383,78 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         ) : null}
       </motion.section>
     </div>
+  );
+}
+
+function paintShot(label: string, alt: number): Promise<Blob> {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 360;
+  const context = canvas.getContext('2d');
+  if (!context) return Promise.reject(new Error('촬영을 저장하지 못했습니다.'));
+  context.fillStyle = '#8eb8ea';
+  context.fillRect(0, 0, 640, 190);
+  context.fillStyle = '#d5e2b8';
+  context.fillRect(0, 190, 640, 170);
+  context.fillStyle = '#ffffff';
+  context.font = '700 32px Pretendard, sans-serif';
+  context.fillText(label, 28, 64);
+  context.fillText(`고도 ${Math.round(alt)}m`, 28, 112);
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('촬영을 저장하지 못했습니다.')), 'image/jpeg', 0.8));
+}
+
+function PovCard({
+  drone, point, progress, total, auto, link, note, craftUrl, stream, onLink, onUrl, onAuto, onStart, onConfirm, onRtl,
+}: {
+  drone: Member | null;
+  point: Waypoint | null;
+  progress: number;
+  total: number;
+  auto: boolean;
+  link: 'sim' | 'phone' | 'mavlink';
+  note: string;
+  craftUrl: string;
+  stream: MediaStream | null;
+  onLink: (link: 'sim' | 'phone' | 'mavlink') => void;
+  onUrl: (url: string) => void;
+  onAuto: () => void;
+  onStart: () => void;
+  onConfirm: () => void;
+  onRtl: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = stream;
+  }, [stream]);
+  return (
+    <aside className="pov" data-pov="1">
+      <div className="pov-view">
+        {stream ? <video ref={videoRef} className="local" autoPlay muted playsInline /> : <div className="horizon" />}
+        <p className="pov-read">
+          <span>고도 {drone?.alt == null ? '—' : `${Math.round(drone.alt)}m`}</span>
+          <span>{drone?.speed == null ? '속도 —' : `${drone.speed}m/s`}</span>
+          <span>{drone?.battery == null ? '배터리 —' : `${drone.battery}%`}</span>
+          <span>{point ? point.label : '목표 없음'}</span>
+        </p>
+      </div>
+      <div className="pov-body">
+        <p className="sub">{point ? stepLabel(point.step) : '비행 전'} · {progress}/{total}</p>
+        <div className="progress" aria-hidden="true"><i style={{ width: total ? `${(progress / total) * 100}%` : '0%' }} /></div>
+        <div className="links">
+          <button className={link === 'sim' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('sim')}>시뮬레이터</button>
+          <button className={link === 'phone' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('phone')}>폰 카메라</button>
+          <button className={link === 'mavlink' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('mavlink')}>기체</button>
+        </div>
+        {link === 'mavlink' ? <input aria-label="기체 주소" value={craftUrl} onChange={(event) => onUrl(event.target.value)} /> : null}
+        {note ? <p className="sub">{note}</p> : null}
+        <div className="pair">
+          <Press onClick={onStart}>비행 시작</Press>
+          <button className={auto ? 'press press-primary' : 'press press-quiet'} type="button" onClick={onAuto}>자동 진행</button>
+        </div>
+        {point && (point.step === 'shot' || point.step === 'arrived') && !auto ? <Press onClick={onConfirm}>확인 후 다음</Press> : null}
+        {link === 'mavlink' ? <button className="text-link" type="button" onClick={onRtl}>복귀</button> : null}
+      </div>
+    </aside>
   );
 }
 

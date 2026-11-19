@@ -6,6 +6,22 @@ export type Mission = {
   joinCode: string;
   createdBy: string;
   createdAt: string;
+  autoRun?: boolean;
+  autoRunAt?: string;
+};
+
+export type SurveyStep = 'wait' | 'enroute' | 'arrived' | 'shot' | 'confirmed';
+
+export type Waypoint = {
+  id: string;
+  zoneId: string | null;
+  lat: number;
+  lng: number;
+  label: string;
+  assigneeId: string;
+  order: number;
+  step: SurveyStep;
+  updatedAt: string;
 };
 
 export type Member = {
@@ -18,6 +34,7 @@ export type Member = {
   lat: number | null;
   lng: number | null;
   accuracy: number | null;
+  alt?: number | null;
   heading: number | null;
   speed: number | null;
   camera: boolean;
@@ -35,6 +52,7 @@ export type Zone = {
   reviewReason: string;
   memo: string;
   assigneeId: string | null;
+  surveyStep?: SurveyStep | null;
   updatedAt: string;
 };
 
@@ -99,4 +117,5 @@ export type MissionData = {
   photos: Photo[];
   events: Activity[];
   notices: Notice[];
+  waypoints: Waypoint[];
 };
