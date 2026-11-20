@@ -21,7 +21,7 @@ sockets.on('connection', (socket) => {
   socket.on('message', (raw) => {
     try {
       const body = JSON.parse(String(raw));
-      if (body.type === 'goto') void command(16, body);
+      if (body.type === 'goto') void command(192, body);
       if (body.type === 'rtl') void command(20, body);
     } catch {
       // 잘못된 명령은 무시합니다.

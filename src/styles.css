@@ -165,6 +165,7 @@ h1, h2, p { margin: 0; }
 .board { position: relative; height: 100dvh; background: #d7dde3; }
 .board .map-frame { height: 100%; border: 0; border-radius: 0; }
 .board .map-locate { top: 78px; bottom: auto; }
+.board .leaflet-top, .board .leaflet-bottom { z-index: 450; }
 .board .leaflet-bottom.leaflet-right { top: 72px; right: 10px; bottom: auto; left: auto; margin: 0; }
 .float-bar {
   position: absolute;
@@ -378,7 +379,9 @@ h1, h2, p { margin: 0; }
 .pov-read span { white-space: nowrap; }
 .pov-body { display: grid; gap: 8px; padding: 10px 12px 12px; }
 .pov-body .sub { color: #d7dde6; margin-top: 0; }
-.pov-body input { min-height: 44px; border-radius: 12px; }
+.pov-body input { min-height: 44px; border-radius: 12px; width: 100%; }
+.craft-actions { display: grid; gap: 8px; }
+.craft-actions .press { width: 100%; }
 .progress { height: 6px; border-radius: 99px; background: #2a3340; overflow: hidden; }
 .progress i { display: block; height: 100%; background: #3182f6; }
 .map-locate {

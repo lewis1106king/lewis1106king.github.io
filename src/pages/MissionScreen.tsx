@@ -10,6 +10,7 @@ import MapCanvas from '../mission/MapCanvas';
 import { useMission } from '../mission/useMission';
 import type { Member, PointKind, Waypoint } from '../mission/types';
 import { connectMavlink, type CraftLink } from '../drone/mavlink';
+import { connectSerial, serialAvailable } from '../drone/serial-mavlink';
 import { activePoint, flyToward, stepLabel } from '../drone/survey';
 import { CameraHub, frameBlob, type Signal } from '../sync/camera';
 import type { Fix } from '../sync/edit';
@@ -51,6 +52,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   const dataRef = useRef(data);
   dataRef.current = data;
   const craftRef = useRef<CraftLink | null>(null);
+  const sentRef = useRef('');
   const shotRef = useRef('');
   const [camTick, setCamTick] = useState(0);
   const hubRef = useRef<CameraHub | null>(null);
@@ -80,6 +82,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   useEffect(() => {
     if (!navigator.geolocation) return undefined;
     const watch = navigator.geolocation.watchPosition((position) => {
+      if (linkRef.current === 'mavlink') return;
       const next: Fix = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
@@ -97,7 +100,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (linkRef.current !== 'sim') mission.beat(point.current);
+      if (linkRef.current === 'phone') mission.beat(point.current);
     }, 5000);
     return () => window.clearInterval(timer);
   }, [mission.beat]);
@@ -140,14 +143,42 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       .catch(() => { shotRef.current = ''; });
   }, [data, selfId, self?.alt]);
 
+  useEffect(() => () => craftRef.current?.close(), []);
+
+  function pushRoute() {
+    const current = dataRef.current;
+    const target = current ? activePoint(current, selfId) : null;
+    if (!target || target.step !== 'enroute') return;
+    sentRef.current = target.id;
+    craftRef.current?.goto(target.lat, target.lng, 30);
+  }
+
+  function connectUsb() {
+    craftRef.current?.close();
+    sentRef.current = '';
+    setLinkNote('포트를 고르세요.');
+    void connectSerial((fix) => missionRef.current.applyCraft(fix), setLinkNote)
+      .then((craft) => {
+        craftRef.current = craft;
+        pushRoute();
+      })
+      .catch(() => setLinkNote('USB 연결을 취소했습니다.'));
+  }
+
+  function connectAddress() {
+    craftRef.current?.close();
+    sentRef.current = '';
+    craftRef.current = connectMavlink(craftUrl, (fix) => missionRef.current.applyCraft(fix), setLinkNote);
+    pushRoute();
+  }
+
   useEffect(() => {
-    if (link !== 'mavlink') return undefined;
-    const craft = connectMavlink(craftUrl, (fix) => {
-      missionRef.current.applyCraft(fix);
-    }, setLinkNote);
-    craftRef.current = craft;
-    return () => craft.close();
-  }, [link, craftUrl]);
+    if (link !== 'mavlink') return;
+    const target = data ? activePoint(data, selfId) : null;
+    if (!target || target.step !== 'enroute' || sentRef.current === target.id) return;
+    sentRef.current = target.id;
+    craftRef.current?.goto(target.lat, target.lng, 30);
+  }, [link, data, selfId]);
 
   useEffect(() => {
     const battery = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
@@ -251,7 +282,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       data-notice={notice?.message ?? ''}
       data-drone={drone?.callsign ?? ''}
       data-feeds={feeds ? '1' : '0'}
-      data-step={activePoint(data, selfId)?.step ?? ''}
+      data-step={activePoint(data, selfId)?.step ?? ((data.waypoints ?? []).length && (data.waypoints ?? []).every((point) => point.step === 'confirmed') ? 'confirmed' : '')}
       data-route={activePoint(data, selfId)?.assigneeId ?? ''}
       data-progress={`${(data.waypoints ?? []).filter((point) => point.step === 'confirmed').length}/${(data.waypoints ?? []).length}`}
     >
@@ -299,8 +330,14 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
           note={linkNote}
           craftUrl={craftUrl}
           stream={hub?.local ?? null}
-          onLink={setLink}
+          onLink={(next) => {
+            if (next !== 'mavlink') craftRef.current?.close();
+            setLink(next);
+          }}
           onUrl={setCraftUrl}
+          onUsb={connectUsb}
+          onAddress={connectAddress}
+          serialOk={serialAvailable()}
           onAuto={() => mission.setAuto(!data.mission.autoRun)}
           onStart={() => mission.startFlight()}
           onConfirm={() => {
@@ -491,7 +528,7 @@ function paintShot(label: string, alt: number): Promise<Blob> {
 }
 
 function PovCard({
-  drone, point, progress, total, auto, link, note, craftUrl, stream, onLink, onUrl, onAuto, onStart, onConfirm, onRtl,
+  drone, point, progress, total, auto, link, note, craftUrl, stream, serialOk, onLink, onUrl, onUsb, onAddress, onAuto, onStart, onConfirm, onRtl,
 }: {
   drone: Member | null;
   point: Waypoint | null;
@@ -502,8 +539,11 @@ function PovCard({
   note: string;
   craftUrl: string;
   stream: MediaStream | null;
+  serialOk: boolean;
   onLink: (link: 'sim' | 'phone' | 'mavlink') => void;
   onUrl: (url: string) => void;
+  onUsb: () => void;
+  onAddress: () => void;
   onAuto: () => void;
   onStart: () => void;
   onConfirm: () => void;
@@ -525,15 +565,24 @@ function PovCard({
         </p>
       </div>
       <div className="pov-body">
-        <p className="sub">{point ? stepLabel(point.step) : '비행 전'} · {progress}/{total}</p>
+        <p className="sub">{point ? stepLabel(point.step) : total > 0 && progress === total ? '확인' : '비행 전'} · {progress}/{total}</p>
         <div className="progress" aria-hidden="true"><i style={{ width: total ? `${(progress / total) * 100}%` : '0%' }} /></div>
         <div className="links">
           <button className={link === 'sim' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('sim')}>시뮬레이터</button>
           <button className={link === 'phone' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('phone')}>폰 카메라</button>
           <button className={link === 'mavlink' ? 'text-link on' : 'text-link'} type="button" onClick={() => onLink('mavlink')}>기체</button>
         </div>
-        {link === 'mavlink' ? <input aria-label="기체 주소" value={craftUrl} onChange={(event) => onUrl(event.target.value)} /> : null}
-        {note ? <p className="sub">{note}</p> : null}
+        {link === 'mavlink' ? (
+          <div className="craft-actions">
+            {serialOk ? <button className="press press-primary" type="button" onClick={onUsb}>드론 연결 (USB)</button> : (
+              <p className="sub">이 브라우저는 USB 연결을 지원하지 않습니다. 컴퓨터는 Chrome이나 Edge, 안드로이드는 Chrome에서 USB로 연결하세요. 아이폰 Safari와 Firefox는 안 됩니다. 폰 카메라를 쓰세요.</p>
+            )}
+            <input aria-label="기체 주소" placeholder="ws:// 주소" value={craftUrl} onChange={(event) => onUrl(event.target.value)} />
+            <button className="press press-quiet" type="button" onClick={onAddress}>주소 연결</button>
+            <p className="sub">DJI 일반 드론은 브라우저에 바로 연결되지 않습니다. DJI 앱이나 DJI Cloud API가 필요합니다.</p>
+          </div>
+        ) : null}
+        {note ? <p className="sub" data-link-note="1">{note}</p> : null}
         <div className="pair">
           <Press onClick={onStart}>비행 시작</Press>
           <button className={auto ? 'press press-primary' : 'press press-quiet'} type="button" onClick={onAuto}>자동 진행</button>
