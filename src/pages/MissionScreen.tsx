@@ -9,8 +9,9 @@ import Press from '../components/Press';
 import MapCanvas from '../mission/MapCanvas';
 import { useMission } from '../mission/useMission';
 import type { Member, PointKind, Waypoint } from '../mission/types';
-import { connectMavlink, type CraftLink } from '../drone/mavlink';
+import { connectMavlink, type CraftLink, type Telemetry } from '../drone/mavlink';
 import { connectSerial, serialAvailable } from '../drone/serial-mavlink';
+import { homeMeters, legIndex, preflight, surveyMission } from '../drone/mission-plan';
 import { activePoint, flyToward, stepLabel } from '../drone/survey';
 import { CameraHub, frameBlob, type Signal } from '../sync/camera';
 import type { Fix } from '../sync/edit';
@@ -47,12 +48,15 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   linkRef.current = link;
   const [craftUrl, setCraftUrl] = useState('ws://127.0.0.1:8777');
   const [linkNote, setLinkNote] = useState('');
+  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
+  const [cruise, setCruise] = useState(30);
+  const [spacing, setSpacing] = useState(40);
+  const [armOpen, setArmOpen] = useState(false);
   const missionRef = useRef(mission);
   missionRef.current = mission;
   const dataRef = useRef(data);
   dataRef.current = data;
   const craftRef = useRef<CraftLink | null>(null);
-  const sentRef = useRef('');
   const shotRef = useRef('');
   const [camTick, setCamTick] = useState(0);
   const hubRef = useRef<CameraHub | null>(null);
@@ -145,40 +149,54 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
 
   useEffect(() => () => craftRef.current?.close(), []);
 
-  function pushRoute() {
-    const current = dataRef.current;
-    const target = current ? activePoint(current, selfId) : null;
-    if (!target || target.step !== 'enroute') return;
-    sentRef.current = target.id;
-    craftRef.current?.goto(target.lat, target.lng, 30);
+  function watchCraft(fix: Parameters<typeof mission.applyCraft>[0]) {
+    missionRef.current.applyCraft(fix);
+  }
+
+  function watchTelemetry(next: Telemetry) {
+    setTelemetry(next);
+  }
+
+  function watchReached(seq: number) {
+    const index = legIndex(seq);
+    const total = dataRef.current?.waypoints.length ?? 0;
+    if (index === null || index >= total) return;
+    missionRef.current.markPassed(index);
   }
 
   function connectUsb() {
     craftRef.current?.close();
-    sentRef.current = '';
+    setTelemetry(null);
     setLinkNote('포트를 고르세요.');
-    void connectSerial((fix) => missionRef.current.applyCraft(fix), setLinkNote)
-      .then((craft) => {
-        craftRef.current = craft;
-        pushRoute();
-      })
+    void connectSerial(watchCraft, setLinkNote, watchTelemetry, watchReached)
+      .then((craft) => { craftRef.current = craft; })
       .catch(() => setLinkNote('USB 연결을 취소했습니다.'));
   }
 
   function connectAddress() {
     craftRef.current?.close();
-    sentRef.current = '';
-    craftRef.current = connectMavlink(craftUrl, (fix) => missionRef.current.applyCraft(fix), setLinkNote);
-    pushRoute();
+    setTelemetry(null);
+    craftRef.current = connectMavlink(craftUrl, watchCraft, setLinkNote, watchTelemetry, watchReached);
   }
 
-  useEffect(() => {
-    if (link !== 'mavlink') return;
-    const target = data ? activePoint(data, selfId) : null;
-    if (!target || target.step !== 'enroute' || sentRef.current === target.id) return;
-    sentRef.current = target.id;
-    craftRef.current?.goto(target.lat, target.lng, 30);
-  }, [link, data, selfId]);
+  function uploadRoute() {
+    const current = dataRef.current;
+    const zone = current?.zones.find((item) => item.id === selectedId) ?? current?.zones[0];
+    if (!zone || zone.path.length < 3) {
+      setLinkNote('구역을 먼저 그리세요.');
+      return;
+    }
+    const home = telemetry?.lat != null && telemetry.lng != null
+      ? { lat: telemetry.lat, lng: telemetry.lng }
+      : zone.path[0];
+    const plan = surveyMission(zone.path, spacing, cruise, home);
+    if (plan.legs.length < 2) {
+      setLinkNote('구역이 좁아 경로가 없습니다. 간격을 줄여 보세요.');
+      return;
+    }
+    mission.installRoute(zone.id, plan.legs);
+    craftRef.current?.upload(plan.items);
+  }
 
   useEffect(() => {
     const battery = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
@@ -320,6 +338,23 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       />
       <motion.section className="sheet" initial={{ y: 36, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 30 }}>
         <span className="grab" aria-hidden="true" />
+        {link === 'mavlink' ? (
+          <TelemetryBar
+            telemetry={telemetry}
+            note={linkNote}
+            cruise={cruise}
+            spacing={spacing}
+            onCruise={setCruise}
+            onSpacing={setSpacing}
+            onUpload={uploadRoute}
+            onStart={() => craftRef.current?.startAuto()}
+            onPause={() => craftRef.current?.pause()}
+            onResume={() => craftRef.current?.resume()}
+            onRtl={() => craftRef.current?.rtl()}
+            onLand={() => craftRef.current?.land()}
+            onArm={() => setArmOpen(true)}
+          />
+        ) : null}
         <PovCard
           drone={drone ?? self}
           point={activePoint(data, selfId)}
@@ -468,6 +503,84 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         ) : null}
         </div>
       </motion.section>
+      {armOpen ? (
+        <ArmDialog
+          telemetry={telemetry}
+          alt={cruise}
+          onCancel={() => setArmOpen(false)}
+          onConfirm={() => {
+            craftRef.current?.armTakeoff(cruise);
+            setArmOpen(false);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function TelemetryBar({
+  telemetry, note, cruise, spacing, onCruise, onSpacing, onUpload, onStart, onPause, onResume, onRtl, onLand, onArm,
+}: {
+  telemetry: Telemetry | null;
+  note: string;
+  cruise: number;
+  spacing: number;
+  onCruise: (value: number) => void;
+  onSpacing: (value: number) => void;
+  onUpload: () => void;
+  onStart: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onRtl: () => void;
+  onLand: () => void;
+  onArm: () => void;
+}) {
+  const distance = homeMeters(
+    telemetry?.lat != null && telemetry.lng != null ? { lat: telemetry.lat, lng: telemetry.lng } : null,
+    telemetry?.homeLat != null && telemetry.homeLng != null ? { lat: telemetry.homeLat, lng: telemetry.homeLng } : null,
+  );
+  const low = telemetry?.battery != null && telemetry.battery <= 20;
+  const dropped = telemetry != null && !telemetry.linked;
+  const place = telemetry?.lat != null && telemetry.lng != null ? `${telemetry.lat.toFixed(5)}, ${telemetry.lng.toFixed(5)}` : '위치 없음';
+  return (
+    <section className="telem" data-telem="1" data-mission={`${telemetry?.missionSeq ?? 0}/${telemetry?.missionCount ?? 0}`}>
+      <p>{telemetry?.linked ? telemetry.mode : '신호 없음'} · {telemetry?.armed ? '시동됨' : '시동 전'} · 위성 {telemetry?.satellites ?? 0}</p>
+      <p>{place} · 고도 {telemetry?.alt == null ? '—' : `${Math.round(telemetry.alt)}m`} · 속도 {telemetry?.speed == null ? '—' : `${telemetry.speed.toFixed(1)}m/s`} · 기수 {telemetry?.heading == null ? '—' : `${Math.round(telemetry.heading)}°`}</p>
+      <p>배터리 {telemetry?.battery == null ? '—' : `${telemetry.battery}%`} {telemetry?.voltage == null ? '' : `${telemetry.voltage.toFixed(1)}V`} · 전파 {telemetry?.rssi ?? '—'} · 홈 {distance == null ? '—' : distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance}m`} · 임무 {telemetry?.missionSeq ?? 0}/{telemetry?.missionCount ?? 0}</p>
+      {low ? <p className="telem-warn">배터리가 낮습니다. 복귀를 누르세요.</p> : null}
+      {dropped ? <p className="telem-warn">신호가 없습니다. 복귀를 준비하세요.</p> : null}
+      {telemetry?.text ? <p>{telemetry.text}</p> : null}
+      {note ? <p data-link-note="1">{note}</p> : null}
+      <div className="telem-settings">
+        <label>고도<input aria-label="수색 고도" inputMode="numeric" value={cruise} onChange={(event) => onCruise(Number(event.target.value) || 0)} /></label>
+        <label>간격<input aria-label="수색 간격" inputMode="numeric" value={spacing} onChange={(event) => onSpacing(Number(event.target.value) || 0)} /></label>
+      </div>
+      <div className="telem-actions">
+        <button className="press press-quiet" type="button" onClick={onUpload}>경로 올리기</button>
+        <button className="press press-primary" type="button" onClick={onStart}>자동 수색</button>
+        <button className="press press-quiet" type="button" onClick={onPause}>일시정지</button>
+        <button className="press press-quiet" type="button" onClick={onResume}>이어하기</button>
+        <button className="press press-quiet" type="button" onClick={onRtl}>복귀</button>
+        <button className="press press-quiet" type="button" onClick={onLand}>착륙</button>
+      </div>
+      <button className="text-link" type="button" onClick={onArm}>시동 후 이륙</button>
+    </section>
+  );
+}
+
+function ArmDialog({ telemetry, alt, onCancel, onConfirm }: { telemetry: Telemetry | null; alt: number; onCancel: () => void; onConfirm: () => void }) {
+  const reasons = preflight({ linked: Boolean(telemetry?.linked), gpsFix: telemetry?.gpsFix ?? 0, battery: telemetry?.battery ?? null });
+  return (
+    <div className="confirm-back" role="presentation">
+      <div className="confirm" role="dialog" aria-labelledby="arm-title">
+        <h2 id="arm-title">시동을 걸고 {alt}m까지 이륙합니다.</h2>
+        <p>주변이 안전한지 확인하세요. 이 버튼만 시동과 이륙을 보냅니다.</p>
+        {reasons.length ? <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul> : <p>GPS, 배터리, 연결이 준비됐습니다.</p>}
+        <div className="pair">
+          <button className="press press-quiet" type="button" onClick={onCancel}>취소</button>
+          <button className="press press-primary" type="button" disabled={reasons.length > 0} onClick={onConfirm}>시동 후 이륙</button>
+        </div>
+      </div>
     </div>
   );
 }

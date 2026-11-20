@@ -3,7 +3,7 @@ import type { DroneStatus, LatLng } from '../domain/rules';
 import { blobToDataUrl, compressImage } from '../lib/imageFile';
 import { addMark, addPhoto, addZone, beat, completeZone, moveMember, moveVertex, setLastSeen, setLevel, setSharing, type Fix } from '../sync/edit';
 import type { PointKind } from './types';
-import { applyCraft, autoFollow, buildRoute, confirmNext, markArrival, markShot, placeCraft, setAutoRun, southOf } from '../drone/survey';
+import { applyCraft, autoFollow, buildRoute, confirmNext, installRoute, markArrival, markPassed, markShot, placeCraft, setAutoRun, southOf } from '../drone/survey';
 import { autoAssign, dropDrone, undoHandover } from '../sync/handover';
 import { openRoom } from '../sync/room';
 import type { MissionData } from './types';
@@ -81,6 +81,8 @@ export function useMission(code: string, selfId: string) {
     markShot: (pointId: string) => change((current) => markShot(current, pointId)),
     setAuto: (autoRun: boolean) => change((current) => setAutoRun(current, autoRun)),
     applyCraft: (fix: { lat: number; lng: number; alt: number | null; heading: number | null; speed: number | null; battery: number | null }) => change((current) => applyCraft(current, selfId, fix)),
+    installRoute: (zoneId: string, legs: LatLng[]) => change((current) => installRoute(current, selfId, zoneId, legs)),
+    markPassed: (order: number) => change((current) => markPassed(current, selfId, order)),
     dropLink: () => change((current) => dropDrone(current, selfId, 'lost')),
     drainBattery: () => change((current) => dropDrone(current, selfId, 'battery')),
     undoHandover: (handoverId: string) => change((current) => undoHandover(current, handoverId)),

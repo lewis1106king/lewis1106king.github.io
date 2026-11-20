@@ -4,15 +4,24 @@ const STX_V2 = 0xfd;
 export const MSG = {
   heartbeat: 0,
   sysStatus: 1,
+  setMode: 11,
   gpsRaw: 24,
   attitude: 30,
   globalPosition: 33,
+  missionRequest: 40,
+  missionCurrent: 42,
+  missionCount: 44,
+  missionReached: 46,
+  missionAck: 47,
+  missionRequestInt: 51,
   requestDataStream: 66,
+  missionItemInt: 73,
   vfrHud: 74,
   commandInt: 75,
   commandLong: 76,
   setPositionTarget: 86,
-  setMode: 11,
+  radioStatus: 109,
+  statusText: 253,
 } as const;
 
 const CRC_EXTRA: Record<number, number> = {
@@ -22,16 +31,32 @@ const CRC_EXTRA: Record<number, number> = {
   24: 24,
   30: 39,
   33: 104,
+  40: 230,
+  42: 28,
+  44: 221,
+  46: 11,
+  47: 153,
+  51: 196,
   66: 148,
+  73: 38,
   74: 20,
   75: 158,
   76: 152,
   86: 5,
+  109: 185,
+  253: 83,
 };
 
 export const CMD = {
-  reposition: 192,
+  navWaypoint: 16,
   rtl: 20,
+  land: 21,
+  takeoff: 22,
+  pause: 193,
+  reposition: 192,
+  cameraDistance: 206,
+  missionStart: 300,
+  arm: 400,
   setMessageInterval: 511,
 } as const;
 
@@ -41,9 +66,20 @@ export type MavMessage =
   | { id: 24; fix: number; satellites: number }
   | { id: 30; yaw: number }
   | { id: 33; lat: number; lng: number; altM: number; relativeM: number; vx: number; vy: number; heading: number | null }
+  | { id: 11; customMode: number }
+  | { id: 40; seq: number }
+  | { id: 42; seq: number }
+  | { id: 44; count: number }
+  | { id: 46; seq: number }
+  | { id: 47; result: number }
+  | { id: 51; seq: number }
+  | { id: 73; seq: number; command: number; lat: number; lng: number; alt: number; p1: number; frame: number }
   | { id: 74; groundspeed: number; heading: number; alt: number }
   | { id: 75; command: number; lat: number; lng: number; alt: number }
-  | { id: 86; lat: number; lng: number; alt: number };
+  | { id: 76; command: number; p1: number; p7: number }
+  | { id: 86; lat: number; lng: number; alt: number }
+  | { id: 109; rssi: number }
+  | { id: 253; severity: number; text: string };
 
 function crcAccumulate(crc: number, byte: number): number {
   let tmp = (byte ^ (crc & 0xff)) & 0xff;
@@ -212,12 +248,174 @@ export function rtlPacket(target = 1): Uint8Array {
   return encodeV2(MSG.commandLong, payload);
 }
 
-export function guidedModePacket(target = 1): Uint8Array {
+export function modePacket(customMode: number, target = 1): Uint8Array {
   const payload: number[] = [];
-  pushU32(payload, 4);
+  pushU32(payload, customMode);
   pushU8(payload, target);
   pushU8(payload, 1);
   return encodeV2(MSG.setMode, payload);
+}
+
+export function guidedModePacket(target = 1): Uint8Array {
+  return modePacket(4, target);
+}
+
+export function commandLongPacket(command: number, params: number[], target = 1): Uint8Array {
+  const payload: number[] = [];
+  for (let index = 0; index < 7; index += 1) pushF32(payload, params[index] ?? 0);
+  pushU16(payload, command);
+  pushU8(payload, target);
+  pushU8(payload, 1);
+  pushU8(payload, 0);
+  return encodeV2(MSG.commandLong, payload);
+}
+
+export type PlanItem = {
+  command: number;
+  frame: number;
+  lat: number;
+  lng: number;
+  alt: number;
+  p1: number;
+  p2: number;
+  p3: number;
+  p4: number;
+};
+
+export function missionCountPacket(count: number, target = 1): Uint8Array {
+  const payload: number[] = [];
+  pushU16(payload, count);
+  pushU8(payload, target);
+  pushU8(payload, 1);
+  pushU8(payload, 0);
+  return encodeV2(MSG.missionCount, payload);
+}
+
+export function missionItemPacket(seq: number, item: PlanItem, target = 1): Uint8Array {
+  const payload: number[] = [];
+  pushF32(payload, item.p1);
+  pushF32(payload, item.p2);
+  pushF32(payload, item.p3);
+  pushF32(payload, item.p4);
+  pushI32(payload, Math.round(item.lat * 1e7));
+  pushI32(payload, Math.round(item.lng * 1e7));
+  pushF32(payload, item.alt);
+  pushU16(payload, seq);
+  pushU16(payload, item.command);
+  pushU8(payload, target);
+  pushU8(payload, 1);
+  pushU8(payload, item.frame);
+  pushU8(payload, 0);
+  pushU8(payload, 1);
+  pushU8(payload, 0);
+  return encodeV2(MSG.missionItemInt, payload);
+}
+
+export function missionRequestPacket(seq: number, target = 255): Uint8Array {
+  const payload: number[] = [];
+  pushU16(payload, seq);
+  pushU8(payload, target);
+  pushU8(payload, 190);
+  pushU8(payload, 0);
+  return encodeV2(MSG.missionRequestInt, payload, 1, 1);
+}
+
+export function missionAckPacket(result = 0, target = 255): Uint8Array {
+  const payload: number[] = [];
+  pushU8(payload, target);
+  pushU8(payload, 190);
+  pushU8(payload, result);
+  pushU8(payload, 0);
+  return encodeV2(MSG.missionAck, payload, 1, 1);
+}
+
+export function missionCurrentPacket(seq: number): Uint8Array {
+  const payload: number[] = [];
+  pushU16(payload, seq);
+  return encodeV2(MSG.missionCurrent, payload, 1, 1);
+}
+
+export function missionReachedPacket(seq: number): Uint8Array {
+  const payload: number[] = [];
+  pushU16(payload, seq);
+  return encodeV2(MSG.missionReached, payload, 1, 1);
+}
+
+export function vehicleHeartbeat(customMode: number, armed: boolean): Uint8Array {
+  const payload: number[] = [];
+  pushU32(payload, customMode);
+  pushU8(payload, 2);
+  pushU8(payload, 3);
+  pushU8(payload, armed ? 129 : 1);
+  pushU8(payload, 4);
+  pushU8(payload, 3);
+  return encodeV2(MSG.heartbeat, payload, 1, 1);
+}
+
+export function vehiclePosition(lat: number, lng: number, alt: number, heading: number, speed: number): Uint8Array {
+  const payload: number[] = [];
+  pushU32(payload, 0);
+  pushI32(payload, Math.round(lat * 1e7));
+  pushI32(payload, Math.round(lng * 1e7));
+  pushI32(payload, Math.round(alt * 1000));
+  pushI32(payload, Math.round(alt * 1000));
+  pushU16(payload, Math.round(speed * 100));
+  pushU16(payload, 0);
+  pushU16(payload, 0);
+  pushU16(payload, Math.round(heading * 100));
+  return encodeV2(MSG.globalPosition, payload, 1, 1);
+}
+
+export function vehicleGps(fix: number, satellites: number): Uint8Array {
+  const payload = Array.from({ length: 30 }, () => 0);
+  payload[28] = fix;
+  payload[29] = satellites;
+  return encodeV2(MSG.gpsRaw, payload, 1, 1);
+}
+
+export function vehicleStatus(percent: number, millivolts: number): Uint8Array {
+  const payload = Array.from({ length: 31 }, () => 0);
+  payload[14] = millivolts & 0xff;
+  payload[15] = (millivolts >> 8) & 0xff;
+  payload[30] = percent;
+  return encodeV2(MSG.sysStatus, payload, 1, 1);
+}
+
+export function vehicleRadio(rssi: number): Uint8Array {
+  const payload = [0, 0, 0, 0, rssi & 0xff, 0, 0, 0, 0];
+  return encodeV2(MSG.radioStatus, payload, 1, 1);
+}
+
+function utf8Bytes(text: string): number[] {
+  const bytes: number[] = [];
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 0x80) bytes.push(code);
+    else if (code < 0x800) bytes.push(0xc0 | (code >> 6), 0x80 | (code & 63));
+    else bytes.push(0xe0 | (code >> 12), 0x80 | ((code >> 6) & 63), 0x80 | (code & 63));
+  }
+  return bytes;
+}
+
+function utf8Text(bytes: Uint8Array): string {
+  let text = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    const byte = bytes[index];
+    if (byte === 0) break;
+    if (byte < 128) text += String.fromCharCode(byte);
+    else if (byte >= 192 && byte < 224 && index + 1 < bytes.length) {
+      text += String.fromCharCode(((byte & 31) << 6) | (bytes[++index] & 63));
+    } else if (index + 2 < bytes.length) {
+      text += String.fromCharCode(((byte & 15) << 12) | ((bytes[++index] & 63) << 6) | (bytes[++index] & 63));
+    }
+  }
+  return text.trim();
+}
+
+export function vehicleText(text: string): Uint8Array {
+  const payload = [6, ...utf8Bytes(text)];
+  while (payload.length < 51) payload.push(0);
+  return encodeV2(MSG.statusText, payload.slice(0, 51), 1, 1);
 }
 
 function decodePayload(id: number, payload: Uint8Array): MavMessage | null {
@@ -262,6 +460,32 @@ function decodePayload(id: number, payload: Uint8Array): MavMessage | null {
   }
   if (id === MSG.vfrHud && payload.length >= 20) {
     return { id: 74, groundspeed: readF32(payload, 4), heading: readI16(payload, 18), alt: readF32(payload, 8) };
+  }
+  if (id === MSG.setMode && payload.length >= 6) return { id: 11, customMode: readU32(payload, 0) };
+  if (id === MSG.missionRequest && payload.length >= 2) return { id: 40, seq: readU16(payload, 0) };
+  if (id === MSG.missionRequestInt && payload.length >= 2) return { id: 51, seq: readU16(payload, 0) };
+  if (id === MSG.missionCurrent && payload.length >= 2) return { id: 42, seq: readU16(payload, 0) };
+  if (id === MSG.missionCount && payload.length >= 2) return { id: 44, count: readU16(payload, 0) };
+  if (id === MSG.missionReached && payload.length >= 2) return { id: 46, seq: readU16(payload, 0) };
+  if (id === MSG.missionAck && payload.length >= 3) return { id: 47, result: payload[2] };
+  if (id === MSG.missionItemInt && payload.length >= 35) {
+    return {
+      id: 73,
+      p1: readF32(payload, 0),
+      lat: readI32(payload, 16) / 1e7,
+      lng: readI32(payload, 20) / 1e7,
+      alt: readF32(payload, 24),
+      seq: readU16(payload, 28),
+      command: readU16(payload, 30),
+      frame: payload[34] ?? 0,
+    };
+  }
+  if (id === MSG.commandLong && payload.length >= 33) {
+    return { id: 76, p1: readF32(payload, 0), p7: readF32(payload, 24), command: readU16(payload, 28) };
+  }
+  if (id === MSG.radioStatus && payload.length >= 5) return { id: 109, rssi: payload[4] };
+  if (id === MSG.statusText && payload.length >= 2) {
+    return { id: 253, severity: payload[0], text: utf8Text(payload.slice(1, 51)) };
   }
   return null;
 }
@@ -308,7 +532,7 @@ export class MavlinkStream {
 }
 
 export function copterMode(customMode: number): string {
-  const names: Record<number, string> = { 0: '안정화', 2: '고도', 3: '자동', 4: '가이드', 5: '로이터', 6: '복귀', 9: '착륙' };
+  const names: Record<number, string> = { 0: '안정화', 2: '고도', 3: '자동', 4: '가이드', 5: '로이터', 6: '복귀', 9: '착륙', 17: '정지' };
   return names[customMode] ?? `모드 ${customMode}`;
 }
 

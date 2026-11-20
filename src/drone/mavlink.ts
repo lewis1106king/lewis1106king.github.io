@@ -1,14 +1,6 @@
-import {
-  MavlinkStream,
-  copterMode,
-  gpsLabel,
-  guidedModePacket,
-  heartbeatPacket,
-  positionTargetPacket,
-  repositionPacket,
-  rtlPacket,
-  type MavMessage,
-} from './mavlink-frame';
+import { MavlinkStream } from './mavlink-frame';
+import type { PlanItem } from './mavlink-frame';
+import { MavSession, type Telemetry } from './link-session';
 
 export type CraftFix = {
   lat: number;
@@ -23,8 +15,16 @@ export type CraftFix = {
 export type CraftLink = {
   goto: (lat: number, lng: number, alt: number) => void;
   rtl: () => void;
+  land: () => void;
+  pause: () => void;
+  resume: () => void;
+  startAuto: () => void;
+  upload: (items: PlanItem[]) => void;
+  armTakeoff: (alt: number) => void;
   close: () => void;
 };
+
+export type { Telemetry };
 
 function numberOf(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -37,58 +37,36 @@ function degrees(value: number | null): number | null {
   return Math.abs(value) > 180 ? value / 1e7 : value;
 }
 
+export const idleLink: CraftLink = {
+  goto() {},
+  rtl() {},
+  land() {},
+  pause() {},
+  resume() {},
+  startAuto() {},
+  upload() {},
+  armTakeoff() {},
+  close() {},
+};
+
 export function connectMavlink(
   url: string,
   onFix: (fix: CraftFix) => void,
   onStatus: (message: string) => void,
+  onTelemetry: (telemetry: Telemetry) => void = () => undefined,
+  onReached: (seq: number) => void = () => undefined,
 ): CraftLink {
   let socket: WebSocket;
   try {
     socket = new WebSocket(url);
   } catch {
     onStatus('주소에 연결하지 못했습니다.');
-    return { goto() {}, rtl() {}, close() {} };
+    return idleLink;
   }
   socket.binaryType = 'arraybuffer';
   const parser = new MavlinkStream();
-  let mode = 0;
-  let gps = 0;
   let battery: number | null = null;
-  let fix: CraftFix | null = null;
-  let quiet = 0;
   let timer = 0;
-
-  const publish = () => {
-    if (!fix) return;
-    fix = { ...fix, battery, mode: `${copterMode(mode)} · ${gpsLabel(gps)}` };
-    onFix(fix);
-    onStatus(`연결됨 · ${fix.mode}`);
-  };
-
-  const apply = (message: MavMessage) => {
-    quiet = 0;
-    if (message.id === 0 && message.type !== 6) {
-      mode = message.customMode;
-      publish();
-    } else if (message.id === 1) {
-      battery = message.battery;
-      publish();
-    } else if (message.id === 24) {
-      gps = message.fix;
-      publish();
-    } else if (message.id === 33) {
-      fix = {
-        lat: message.lat,
-        lng: message.lng,
-        alt: message.relativeM,
-        heading: message.heading,
-        speed: Math.hypot(message.vx, message.vy),
-        battery,
-        mode: '',
-      };
-      publish();
-    }
-  };
 
   const sendBytes = (bytes: Uint8Array) => {
     if (socket.readyState !== WebSocket.OPEN) return;
@@ -97,26 +75,35 @@ export function connectMavlink(
     socket.send(copy);
   };
 
+  const session = new MavSession(sendBytes, (telemetry) => {
+    battery = telemetry.battery;
+    onTelemetry(telemetry);
+    if (telemetry.lat !== null && telemetry.lng !== null) {
+      onFix({
+        lat: telemetry.lat,
+        lng: telemetry.lng,
+        alt: telemetry.alt,
+        heading: telemetry.heading,
+        speed: telemetry.speed,
+        battery: telemetry.battery,
+        mode: telemetry.mode,
+      });
+    }
+  }, onStatus, onReached);
+
   socket.onopen = () => {
     onStatus('연결됨');
-    const beat = () => {
-      sendBytes(heartbeatPacket());
-      quiet += 1;
-      if (quiet > 3) onStatus('신호 없음');
-    };
-    beat();
-    timer = window.setInterval(beat, 1000);
+    session.beat();
+    timer = window.setInterval(() => session.beat(), 1000);
   };
   socket.onerror = () => onStatus('신호 없음');
   socket.onmessage = (event) => {
     if (event.data instanceof ArrayBuffer) {
-      for (const message of parser.push(new Uint8Array(event.data))) apply(message);
+      session.ingest(parser.push(new Uint8Array(event.data)));
       return;
     }
     if (event.data instanceof Blob) {
-      void event.data.arrayBuffer().then((buffer) => {
-        for (const message of parser.push(new Uint8Array(buffer))) apply(message);
-      });
+      void event.data.arrayBuffer().then((buffer) => session.ingest(parser.push(new Uint8Array(buffer))));
       return;
     }
     try {
@@ -134,7 +121,6 @@ export function connectMavlink(
           mode: typeof body.mode === 'string' ? body.mode : '',
         });
         onStatus('연결됨');
-        quiet = 0;
         return;
       }
       if (kind === 'GLOBAL_POSITION_INT') {
@@ -155,7 +141,6 @@ export function connectMavlink(
           mode: '',
         });
         onStatus('연결됨');
-        quiet = 0;
       }
     } catch {
       onStatus('신호 없음');
@@ -164,15 +149,16 @@ export function connectMavlink(
 
   return {
     goto: (lat, lng, alt) => {
-      sendBytes(guidedModePacket());
-      sendBytes(repositionPacket(lat, lng, alt));
-      sendBytes(positionTargetPacket(lat, lng, alt));
+      session.goto(lat, lng, alt);
       if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'goto', lat, lng, alt }));
     },
-    rtl: () => {
-      sendBytes(rtlPacket());
-      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'rtl' }));
-    },
+    rtl: () => session.rtl(),
+    land: () => session.land(),
+    pause: () => session.pause(),
+    resume: () => session.resume(),
+    startAuto: () => session.startAuto(),
+    upload: (items) => session.upload(items),
+    armTakeoff: (alt) => session.armTakeoff(alt),
     close: () => {
       window.clearInterval(timer);
       socket.close();

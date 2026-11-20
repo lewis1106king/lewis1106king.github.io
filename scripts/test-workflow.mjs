@@ -15,6 +15,7 @@ execFileSync(pnpm, [
   'src/map/geo.ts', 'src/map/geo.test.ts',
   'src/drone/survey.ts', 'src/drone/survey.test.ts',
   'src/drone/mavlink-frame.ts', 'src/drone/mavlink-frame.test.ts',
+  'src/drone/lawn.ts', 'src/drone/mission-plan.ts', 'src/drone/mission-plan.test.ts',
   '--rootDir', 'src', '--outDir', output, '--module', 'esnext', '--moduleResolution', 'bundler',
   '--target', 'ES2022', '--skipLibCheck', '--strict',
 ], { cwd: resolve('.'), stdio: 'inherit', shell: process.platform === 'win32' });
@@ -41,3 +42,4 @@ execFileSync(process.execPath, [join(output, 'sync', 'handover.test.js')], { std
 execFileSync(process.execPath, [join(output, 'map', 'geo.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'drone', 'survey.test.js')], { stdio: 'inherit' });
 execFileSync(process.execPath, [join(output, 'drone', 'mavlink-frame.test.js')], { stdio: 'inherit' });
+execFileSync(process.execPath, [join(output, 'drone', 'mission-plan.test.js')], { stdio: 'inherit' });

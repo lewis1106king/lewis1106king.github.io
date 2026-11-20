@@ -150,6 +150,49 @@ export function autoFollow(data: MissionData): MissionData {
   return (data.waypoints ?? []).filter((point) => point.step === 'shot').reduce((next, point) => confirmNext(next, point.id), data);
 }
 
+export function installRoute(data: MissionData, selfId: string, zoneId: string, legs: LatLng[]): MissionData {
+  const stamp = new Date().toISOString();
+  const waypoints: Waypoint[] = legs.slice(0, 36).map((leg, order) => ({
+    id: `wp-${zoneId}-${order}`,
+    zoneId,
+    lat: leg.lat,
+    lng: leg.lng,
+    label: `${order + 1}`,
+    assigneeId: selfId,
+    order,
+    step: 'wait',
+    updatedAt: stamp,
+  }));
+  if (waypoints[0]) waypoints[0].step = 'enroute';
+  return syncSteps({ ...data, waypoints });
+}
+
+export function markPassed(data: MissionData, selfId: string, throughOrder: number): MissionData {
+  const stamp = new Date().toISOString();
+  const seen = new Set(data.points.filter((point) => point.memo.startsWith('자동 기록')).map((point) => point.id));
+  const points = [...data.points];
+  let changed = false;
+  const waypoints = (data.waypoints ?? []).map((point) => {
+    if (point.assigneeId !== selfId || point.order > throughOrder || point.step === 'confirmed') return point;
+    changed = true;
+    const id = `pass-${point.id}`;
+    if (!seen.has(id) && !points.some((item) => item.id === id)) {
+      points.push({
+        id,
+        lat: point.lat,
+        lng: point.lng,
+        kind: 'clue',
+        label: '통과',
+        memo: '자동 기록. 사람이 확인한 것은 아닙니다.',
+        createdBy: selfId,
+        createdAt: stamp,
+      });
+    }
+    return { ...point, step: 'confirmed' as const, updatedAt: stamp };
+  });
+  return changed ? syncSteps({ ...data, waypoints, points }) : data;
+}
+
 export function setAutoRun(data: MissionData, autoRun: boolean): MissionData {
   return { ...data, mission: { ...data.mission, autoRun, autoRunAt: new Date().toISOString() } };
 }
