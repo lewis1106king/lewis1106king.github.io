@@ -541,12 +541,22 @@ function TelemetryBar({
   );
   const low = telemetry?.battery != null && telemetry.battery <= 20;
   const dropped = telemetry != null && !telemetry.linked;
-  const place = telemetry?.lat != null && telemetry.lng != null ? `${telemetry.lat.toFixed(5)}, ${telemetry.lng.toFixed(5)}` : '위치 없음';
+  const place = telemetry?.lat != null && telemetry.lng != null ? `${telemetry.lat.toFixed(5)}, ${telemetry.lng.toFixed(5)}` : '';
   return (
     <section className="telem" data-telem="1" data-mission={`${telemetry?.missionSeq ?? 0}/${telemetry?.missionCount ?? 0}`}>
-      <p>{telemetry?.linked ? telemetry.mode : '신호 없음'} · {telemetry?.armed ? '시동됨' : '시동 전'} · 위성 {telemetry?.satellites ?? 0}</p>
-      <p>{place} · 고도 {telemetry?.alt == null ? '—' : `${Math.round(telemetry.alt)}m`} · 속도 {telemetry?.speed == null ? '—' : `${telemetry.speed.toFixed(1)}m/s`} · 기수 {telemetry?.heading == null ? '—' : `${Math.round(telemetry.heading)}°`}</p>
-      <p>배터리 {telemetry?.battery == null ? '—' : `${telemetry.battery}%`} {telemetry?.voltage == null ? '' : `${telemetry.voltage.toFixed(1)}V`} · 전파 {telemetry?.rssi ?? '—'} · 홈 {distance == null ? '—' : distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance}m`} · 임무 {telemetry?.missionSeq ?? 0}/{telemetry?.missionCount ?? 0}</p>
+      <p>{telemetry?.linked ? telemetry.mode : '신호 없음'} · {telemetry?.armed ? '시동됨' : '시동 전'}{place ? ` · ${place}` : ''}</p>
+      <dl className="gauges">
+        <div><dt>고도</dt><dd>{telemetry?.alt == null ? '—' : `${Math.round(telemetry.alt)}m`}</dd></div>
+        <div><dt>속도</dt><dd>{telemetry?.speed == null ? '—' : `${telemetry.speed.toFixed(1)}`}</dd></div>
+        <div><dt>기수</dt><dd>{telemetry?.heading == null ? '—' : `${Math.round(telemetry.heading)}°`}</dd></div>
+        <div><dt>배터리</dt><dd>{telemetry?.battery == null ? '—' : `${telemetry.battery}%`}</dd></div>
+        <div><dt>전압</dt><dd>{telemetry?.voltage == null ? '—' : `${telemetry.voltage.toFixed(1)}V`}</dd></div>
+        <div><dt>위성</dt><dd>{telemetry?.satellites ?? 0}</dd></div>
+        <div><dt>전파</dt><dd>{telemetry?.rssi ?? '—'}</dd></div>
+        <div><dt>홈</dt><dd>{distance == null ? '—' : distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${distance}m`}</dd></div>
+        <div><dt>임무</dt><dd>{telemetry?.missionSeq ?? 0}/{telemetry?.missionCount ?? 0}</dd></div>
+        <div><dt>GPS</dt><dd>{telemetry?.gpsFix && telemetry.gpsFix >= 3 ? '3D' : telemetry?.gpsFix === 2 ? '2D' : '없음'}</dd></div>
+      </dl>
       {low ? <p className="telem-warn">배터리가 낮습니다. 복귀를 누르세요.</p> : null}
       {dropped ? <p className="telem-warn">신호가 없습니다. 복귀를 준비하세요.</p> : null}
       {telemetry?.text ? <p>{telemetry.text}</p> : null}

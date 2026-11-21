@@ -41,9 +41,14 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
         >
           <div className="trio">
-            {['완료', '자동 인계', '사진'].map((word) => (
-              <motion.article key={word} variants={rise} transition={{ type: 'spring', stiffness: 90, damping: 18 }}>
-                <b>{word}</b>
+            {[
+              ['구역', '지도에 긋고, 지나간 자취로 수색 비율을 봅니다.'],
+              ['기체', 'USB나 열린 주소로 붙입니다. 시동은 조종사에게 있습니다.'],
+              ['인계', '끊기면 가장 가까운 드론이 남은 구역을 이어받습니다.'],
+            ].map(([title, body]) => (
+              <motion.article key={title} variants={rise} transition={{ type: 'spring', stiffness: 90, damping: 18 }}>
+                <b>{title}</b>
+                <span>{body}</span>
               </motion.article>
             ))}
           </div>
