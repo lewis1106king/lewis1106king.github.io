@@ -1,16 +1,16 @@
 import { cellCovers, searchGrid } from '../map/geo';
 import type { MissionData } from '../mission/types';
 
-export function zoneCover(path: { lat: number; lng: number }[], trails: { lat: number; lng: number }[]): { seen: number; total: number } {
-  const cells = searchGrid(path);
+export function zoneCover(path: { lat: number; lng: number }[], trails: { lat: number; lng: number }[], stepMeters = 40): { seen: number; total: number } {
+  const cells = searchGrid(path, stepMeters);
   const seen = cells.filter((cell) => trails.some((point) => cellCovers(cell, point))).length;
   return { seen, total: cells.length };
 }
 
-export function briefingText(data: MissionData): string {
+export function briefingText(data: MissionData, stepMeters = 40): string {
   const trails = data.members.flatMap((member) => member.trail);
   const zones = data.zones.map((zone) => {
-    const cover = zoneCover(zone.path, trails);
+    const cover = zoneCover(zone.path, trails, stepMeters);
     const ratio = cover.total ? Math.round((cover.seen / cover.total) * 100) : 0;
     return `${zone.label}: ${cover.total && ratio === 0 ? '미수색' : `수색 ${ratio}%`}`;
   });

@@ -1,5 +1,6 @@
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { useLook } from './components/LookDialog';
 import { selfId } from './sync/identity';
 import CodePage from './pages/CodePage';
 import LandingPage from './pages/LandingPage';
@@ -41,6 +42,7 @@ function routeKey(route: Route): string {
 export default function App() {
   const [route, setRoute] = useState<Route>(parseRoute);
   const me = selfId();
+  useLook();
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'light';

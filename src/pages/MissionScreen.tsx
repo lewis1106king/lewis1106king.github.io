@@ -5,6 +5,7 @@ import { reportHtml } from '../domain/report';
 import { briefingText, zoneCover } from '../domain/brief';
 import { searchPlaces, type PlaceHit } from '../lib/geocode';
 import { rectPath, ringArea, ringMeters } from '../map/geo';
+import LookDialog, { useLook } from '../components/LookDialog';
 import Press from '../components/Press';
 import MapCanvas from '../mission/MapCanvas';
 import { useMission } from '../mission/useMission';
@@ -52,6 +53,8 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
   const [cruise, setCruise] = useState(30);
   const [spacing, setSpacing] = useState(40);
   const [armOpen, setArmOpen] = useState(false);
+  const [lookOpen, setLookOpen] = useState(false);
+  const look = useLook();
   const missionRef = useRef(mission);
   missionRef.current = mission;
   const dataRef = useRef(data);
@@ -303,12 +306,17 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       data-step={activePoint(data, selfId)?.step ?? ((data.waypoints ?? []).length && (data.waypoints ?? []).every((point) => point.step === 'confirmed') ? 'confirmed' : '')}
       data-route={activePoint(data, selfId)?.assigneeId ?? ''}
       data-progress={`${(data.waypoints ?? []).filter((point) => point.step === 'confirmed').length}/${(data.waypoints ?? []).length}`}
+      data-search={look.search ? '1' : '0'}
+      data-tools={look.tools ? '1' : '0'}
+      data-legend={look.legend ? '1' : '0'}
+      data-telem={look.telem ? '1' : '0'}
     >
       <header className="float-bar">
         <button className="text-link" type="button" onClick={onBack}>코드</button>
         <b>{data.mission.joinCode}</b>
         <span className="net">{mission.live ? '연결' : '이 기기'}</span>
         <span className={mission.live ? 'dot on' : 'dot'} aria-label={mission.live ? '연결됨' : '연결 중'} />
+        <button className="text-link" type="button" onClick={() => setLookOpen(true)}>화면</button>
       </header>
       <PlaceBar onJump={(hit) => setFocus({ ...hit, zoom: 16, key: Date.now() })} onLocate={() => setLocateKey((value) => value + 1)} />
       <MapCanvas
@@ -325,7 +333,9 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         base={base}
         heading={self?.heading}
         showLocate
-        showTools
+        showTools={look.tools}
+        showLegend={look.legend}
+        gridMeters={look.grid}
         closeUp
         active
         onPick={tool === 'zone' ? undefined : pick}
@@ -338,7 +348,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
       />
       <motion.section className="sheet" initial={{ y: 36, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 30 }}>
         <span className="grab" aria-hidden="true" />
-        {link === 'mavlink' ? (
+        {link === 'mavlink' && look.telem ? (
           <TelemetryBar
             telemetry={telemetry}
             note={linkNote}
@@ -353,6 +363,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
             onRtl={() => craftRef.current?.rtl()}
             onLand={() => craftRef.current?.land()}
             onArm={() => setArmOpen(true)}
+            warnAt={look.battery}
           />
         ) : null}
         <PovCard
@@ -390,6 +401,18 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
           </div>
         ) : null}
         <div className="sheet-main">
+        {(data.waypoints ?? []).length ? (
+          <ol className="route-list">
+            {(data.waypoints ?? []).map((point) => (
+              <li key={point.id}>
+                <button type="button" onClick={() => setFocus({ lat: point.lat, lng: point.lng, zoom: 18, key: Date.now() })}>
+                  <span>{point.order + 1}. {point.label}</span>
+                  <span className={point.step === 'confirmed' ? 'done' : ''}>{stepLabel(point.step)}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        ) : null}
         {notice && tool === 'zone' && !drone ? <p className="toast" role="status">{notice.message}</p> : null}
         {camError ? <p className="error" role="alert">{camError}</p> : null}
         {mission.error ? <p className="error" role="alert">{mission.error}</p> : null}
@@ -444,7 +467,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
           <>
             <h2>{zone.label}</h2>
             <p className="sub">{owner?.callsign ?? '대기'} · {taskLabel[zone.taskStatus]} · {(() => {
-              const cover = zoneCover(zone.path, data.members.flatMap((member) => member.trail));
+              const cover = zoneCover(zone.path, data.members.flatMap((member) => member.trail), look.grid);
               if (!cover.total || cover.seen === 0) return '미수색';
               return `수색 ${Math.round((cover.seen / cover.total) * 100)}%`;
             })()}</p>
@@ -476,14 +499,14 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
             <button className="text-link" type="button" onClick={() => setTool('mark')}>표시</button>
             <button className="text-link" type="button" onClick={() => setTool('seen')}>최종 목격</button>
             <button className="text-link" type="button" onClick={() => {
-              void navigator.clipboard.writeText(briefingText(data)).then(() => setCopied(true));
+              void navigator.clipboard.writeText(briefingText(data, look.grid)).then(() => setCopied(true));
             }}>{copied ? '복사했어요' : '상황 복사'}</button>
             <button className="text-link" type="button" onClick={() => {
               const html = reportHtml({
                 title: data.mission.title,
                 generatedAt: new Date().toISOString(),
                 pendingZoneIds: [],
-                extra: briefingText(data),
+                extra: briefingText(data, look.grid),
                 zones: data.zones.map((item) => ({
                   id: item.id, label: item.label, taskStatus: item.taskStatus, observationStatus: item.observationStatus,
                   assigneeId: item.assigneeId, photoCount: data.photos.filter((photo) => photo.zoneId === item.id).length,
@@ -503,6 +526,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
         ) : null}
         </div>
       </motion.section>
+      {lookOpen ? <LookDialog onClose={() => setLookOpen(false)} /> : null}
       {armOpen ? (
         <ArmDialog
           telemetry={telemetry}
@@ -519,7 +543,7 @@ export default function MissionScreen({ code, selfId, onBack }: { code: string; 
 }
 
 function TelemetryBar({
-  telemetry, note, cruise, spacing, onCruise, onSpacing, onUpload, onStart, onPause, onResume, onRtl, onLand, onArm,
+  telemetry, note, cruise, spacing, warnAt, onCruise, onSpacing, onUpload, onStart, onPause, onResume, onRtl, onLand, onArm,
 }: {
   telemetry: Telemetry | null;
   note: string;
@@ -534,12 +558,13 @@ function TelemetryBar({
   onRtl: () => void;
   onLand: () => void;
   onArm: () => void;
+  warnAt: number;
 }) {
   const distance = homeMeters(
     telemetry?.lat != null && telemetry.lng != null ? { lat: telemetry.lat, lng: telemetry.lng } : null,
     telemetry?.homeLat != null && telemetry.homeLng != null ? { lat: telemetry.homeLat, lng: telemetry.homeLng } : null,
   );
-  const low = telemetry?.battery != null && telemetry.battery <= 20;
+  const low = telemetry?.battery != null && telemetry.battery <= warnAt;
   const dropped = telemetry != null && !telemetry.linked;
   const place = telemetry?.lat != null && telemetry.lng != null ? `${telemetry.lat.toFixed(5)}, ${telemetry.lng.toFixed(5)}` : '';
   return (

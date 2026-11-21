@@ -31,6 +31,8 @@ type MapCanvasProps = {
   heading?: number | null;
   showLocate?: boolean;
   showTools?: boolean;
+  showLegend?: boolean;
+  gridMeters?: number;
   closeUp?: boolean;
   active?: boolean;
   onPick?: (point: LatLng) => void;
@@ -58,6 +60,8 @@ export default function MapCanvas({
   heading = null,
   showLocate = false,
   showTools = false,
+  showLegend = true,
+  gridMeters = 40,
   closeUp = false,
   active = true,
   onPick,
@@ -154,7 +158,7 @@ export default function MapCanvas({
     zones.forEach((zone) => {
       if (zone.path.length < 3) return;
       const selected = zone.id === selectedZoneId;
-      const cover = zoneCover(zone.path, members.flatMap((member) => member.trail));
+      const cover = zoneCover(zone.path, members.flatMap((member) => member.trail), gridMeters);
       const bare = cover.total > 0 && cover.seen === 0;
       const color = bare ? '#ff9f0a' : zone.taskStatus === 'completed' ? tone.completed : zone.taskStatus === 'interrupted' ? tone.interrupted : tone[zone.observationStatus];
       const polygon = L.polygon(zone.path.map((point) => [point.lat, point.lng] as [number, number]), {
@@ -173,7 +177,7 @@ export default function MapCanvas({
       polygon.addTo(layer);
       if (selected) {
         const trails = members.flatMap((member) => member.trail);
-        searchGrid(zone.path, 40).forEach((cell) => {
+        searchGrid(zone.path, gridMeters).forEach((cell) => {
           const seen = trails.some((point) => cellCovers(cell, point));
           L.rectangle([[cell.south, cell.west], [cell.north, cell.east]], {
             color: seen ? '#03b26c' : '#ffffff',
@@ -272,7 +276,7 @@ export default function MapCanvas({
       });
       marker.addTo(layer);
     });
-  }, [zones, points, members, waypoints, lastSeen, draft, selectedZoneId, selfId]);
+  }, [zones, points, members, waypoints, lastSeen, draft, selectedZoneId, selfId, gridMeters]);
 
   useEffect(() => {
     if (!focus) return;
@@ -303,7 +307,7 @@ export default function MapCanvas({
           <i className="compass" style={{ transform: `rotate(${-(heading ?? 0)}deg)` }} aria-label="나침반" />
         </div>
       ) : null}
-      {showTools ? (
+      {showTools && showLegend ? (
         <ul className="legend">
           <li><s style={{ background: '#3182f6' }} />미확인</li>
           <li><s style={{ background: '#03b26c' }} />수색됨</li>

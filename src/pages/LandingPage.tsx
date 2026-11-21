@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import LookDialog from '../components/LookDialog';
 import MapCanvas from '../mission/MapCanvas';
 import Press from '../components/Press';
 
@@ -8,10 +10,12 @@ const rise = {
 };
 
 export default function LandingPage({ onStart, onJoin }: { onStart: () => void; onJoin: () => void }) {
+  const [lookOpen, setLookOpen] = useState(false);
   return (
     <div className="site">
       <header className="nav">
         <span className="word">수색 연결</span>
+        <button className="text-link" type="button" onClick={() => setLookOpen(true)}>화면</button>
       </header>
       <main>
         <section className="hero">
@@ -54,6 +58,7 @@ export default function LandingPage({ onStart, onJoin }: { onStart: () => void; 
           </div>
         </motion.section>
       </main>
+      {lookOpen ? <LookDialog onClose={() => setLookOpen(false)} /> : null}
       <div className="dock">
         <Press onClick={onStart}>새 수색 시작</Press>
         <button className="text-link" type="button" onClick={onJoin}>코드가 있어요</button>
